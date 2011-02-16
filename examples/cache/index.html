@@ -1,0 +1,78 @@
+<!--
+#
+# Copyright (C) 2011 Evite LLC
+
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+-->
+<html>
+    <head>
+        <style>
+            #message { padding: 10px; }
+            label { float: left; width: 50px; text-align: right; padding-right: 10px; }
+        </style>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js"></script>
+        <script>
+            function display_msg(msg){
+                $('#message').text(msg);
+            }
+            function key_val(){
+                return $('#key').val().replace(' ','_');
+            }
+            $(document).ready(function(){
+                $('#get_btn').click(function(){
+                    $.ajax({
+                        url: '/cache/'+key_val(),
+                        success: function(data){
+                            display_msg('Result: '+data);
+                        },
+                        error: function(){
+                            display_msg('Not Found! (try setting first)');
+                        }
+                    });
+                });
+                $('#set_btn').click(function(){
+                    var d = {'value':$('#value').val()};
+                    $('#value').val('');
+                    console.log(d);
+                    $.ajax({
+                        type: 'POST',
+                        data: d,
+                        url: '/cache/'+key_val(),
+                        success: function(data){
+                            display_msg('Saved: '+data);
+                        },
+                        error: function(){
+                            display_msg('Error!!!');
+                        },
+                        dataType: "json"
+                    });
+                });
+            });
+        </script>
+    </head>
+    <body>
+
+        <h1>Exposed Cache</h1>
+        <div id="message"></div>
+        <label>Key</label>
+        <input id="key"/><br />
+        <label>Value</label>
+        <input id="value"/><br />
+        <button id="get_btn">Get</button>
+
+        <button id="set_btn">Set</button>
+    </body>
+</html>
+

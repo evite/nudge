@@ -1,0 +1,2 @@
+* ENDPOINTS -> should only be one set. (nuke the tornado ones)
+* Support File objects (test currently disabled)
