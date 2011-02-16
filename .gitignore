@@ -1,0 +1,15 @@
+*.py~
+*.pyc
+*.db
+*.egg
+*.egg-info
+*.log
+*.swp
+.tags
+.coverage
+build/
+dist/
+.svn/
+.project
+.pydevproject
+.idea
