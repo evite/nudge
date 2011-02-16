@@ -24,7 +24,7 @@ from setuptools import setup
 
 setup(
     name='nudge',
-    version='1.0',
+    version='0.1',
     packages=[
         'nudge',
     ],
