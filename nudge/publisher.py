@@ -93,6 +93,16 @@ responses = {
   505: 'HTTP Version Not Supported',
 }
 
+def lazyprop(fn):
+    attr_name = '_lazy_' + fn.__name__
+    @property
+    def _lazyprop(self):
+        if not hasattr(self, attr_name):
+            setattr(self, attr_name, fn(self))
+        return getattr(self, attr_name)
+    return _lazyprop
+
+
 def Args(*args, **kwargs):
     return list(args) or [], kwargs or {}
 
@@ -158,39 +168,53 @@ def _write(req, content):
 class WSGIRequest(object):
 
     def __init__(self, req_dict):
-        req = Dictomatic.wrap(req_dict)
+        self.req = Dictomatic.wrap(req_dict)
         self.start_time = time.time()
-        self.arguments = {}
+        self.method = self.req['REQUEST_METHOD']
+        self.remote_ip = self.req['REMOTE_ADDR']
+        self.body = self.req['wsgi.input'].read()
+        self._buffer = ''
+    
+    @lazyprop
+    def path(self):
+        return self.req['PATH_INFO']
+
+    @lazyprop
+    def uri(self):
+        return '%s/%s/%s' % (
+                self.req['wsgi.url_scheme'], 
+                self.req['HTTP_HOST'], 
+                self.req['PATH_INFO']
+            )
+
+    @lazyprop
+    def headers(self):
+        _headers = {}
+        for k,v in self.req.iteritems():
+            if k.startswith('HTTP_'):
+                _headers[k.replace('HTTP_', '').lower()] = v
+            elif k == 'CONTENT_TYPE':
+                _headers['Content-Type'] = v
+        return _headers
+
+    @lazyprop
+    def arguments(self):
+        _arguments = {}
         try:
-            arguments = req.get('QUERY_STRING', '').split('&')
-            arguments = [a.split('=') for a in arguments]
-            arguments = filter(lambda x: len(x) == 2, arguments)
-            for a in arguments:
-                if a[0] in self.arguments:
-                    self.arguments[a[0]].append(a[1])
+            tmp = self.req.get('QUERY_STRING', '').split('&')
+            tmp = [a.split('=') for a in tmp]
+            tmp = filter(lambda x: len(x) == 2, tmp)
+            for a in tmp:
+                if a[0] in _arguments:
+                    _arguments[a[0]].append(a[1])
                 else:
                     self.arguments[a[0]] = [a[1]]
         except (Exception), e:
             _log.error(
                 'problem making arguments out of QUERY_STRING: %s', 
-                req['QUERY_STRING']
+                self.req['QUERY_STRING']
             )
-        self.method = req['REQUEST_METHOD']
-        self.path = req['PATH_INFO']
-        self.uri = '%s/%s/%s' % (
-            req['wsgi.url_scheme'], 
-            req['HTTP_HOST'], 
-            req['PATH_INFO']
-        )
-        self.remote_ip = req['REMOTE_ADDR']
-        self.headers = {}
-        for k,v in req.iteritems():
-            if k.startswith('HTTP_'):
-                self.headers[k.replace('HTTP_', '').lower()] = v
-            elif k == 'CONTENT_TYPE':
-                self.headers['Content-Type'] = v
-        self.body = req['wsgi.input'].read()
-        self._buffer = ''
+        return _arguments
 
     def write(self, content):
         self._buffer += content
