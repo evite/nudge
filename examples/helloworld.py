@@ -16,36 +16,55 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-from optparse import OptionParser
+"""
+A simple hello world example that illustrates how easy it is to write
+a web application using Nudge.
+
+It is recommened to use a class for each logical section of your application.
+So if you were making Evite, you would probably have a separate class for
+Users, Events, Gallery, etc. These classes are usually implemented 
+independently of anything HTTP related (and in different files).
+
+You will notice our class methods accept and return regular Python variables.
+This makes your service classes extremely portable, elegant, and easy to test.
+
+The service_description is where the real magic happens. Each Endpoint
+describes in detail one type of HTTP request the user of your application
+might make. Endpoints are designed to handle request routing, 
+input transformation and validation, error/exception handling, 
+and output formatting.
+
+Anything HTTP should be possible with Nudge, but you may need to write an
+extension or two. See the simplecms example for some examples extending Nudge.
+"""
 
 import nudge.arg as args
-
 from nudge import serve, Endpoint, Args
 from nudge.renderer import HTML
 
-class StupidException(Exception): pass
+class ExampleException(Exception): pass
 
 class HelloWorldService():
 
     def index(self):
         """ Just a starting point for the example service """
         return """
-<html>
-<h1>Demo</h1>
+            <html>
+            <h1>Demo</h1>
 
-<form action="/hello" method="get">
-<input type="text" name="name" value="Joe"/>
-<input type="submit" value="get"/>
-</form>
-</html>
-"""
+            <form action="/hello" method="get">
+            <input type="text" name="name" value="Joe"/>
+            <input type="submit" value="get"/>
+            </form>
+            </html>
+            """
 
     def say_hello(self, name, number=0):
         """ Say hello """
         return "Hello %s" % name
 
     def just_throw_an_exception(self):
-        raise StupidException("omg what did you do?")
+        raise ExampleException("omg what did you do?")
 
 hws = HelloWorldService()
 
@@ -87,11 +106,10 @@ service_description = [
         function=hws.just_throw_an_exception,
         args=Args(),
         exceptions={
-            StupidException: 400,
+            ExampleException: 400,
         }
     )
 ]
-
 
 if __name__ == "__main__":
     serve(service_description)

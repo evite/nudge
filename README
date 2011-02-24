@@ -13,7 +13,58 @@
 
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, 
+# Fifth Floor, Boston, MA  02110-1301  USA
 
+Nudge is a free, open-source pure python mini-framework created to make
+developing web service applications a breeze.
 
-Nudge!
+Nudge allows you to publish simple python functions and methods as 
+wsgi request handlers. You design your api independently of any specific 
+web technologies. 
+
+This allows nudge (and in turn your service classes) to work with any 
+wsgi compatible python http server (ours have run in production with 
+tornado and eventlet). It also allows for a very elegant api description, 
+and removes a ton of repeated and tedious http specific code typically
+found when developing under other web frameworks.
+
+Questions or comments about nudge? Join the google group!
+Google group: python-nudge
+
+Installation: 
+The following will create a new directory called nudge:
+git clone git://github.com/evite/nudge.git
+cd nudge
+activate a virtual environment (if desired)
+python setup.py install
+
+Further nudge rationalization:
+
+Nudge was created to make Evite's python services portable. We did not want
+to be tied to any specific web technology, and we wanted to be able to write
+clean python classes that were not directly tied to http requests.
+
+At the time we were using tornado directly where you supply one class for
+each uri. This resulted in over a hundred classes, and a complete breakdown
+in organization.
+
+We also wanted to steer clear of typical "handler" code which usually
+does some error checking and request routing, and always requires a lot
+of repeated and unorganized code.
+
+What Nudge IS:
+- A web service layer mini framework
+- A great solution for making a RESTful API
+- Used to make a WSGI compatible Python application that can be run
+  by a Python HTTP server.
+- Also good for making traditional web applications, but this is not the
+  normal use case.
+
+What Nudge is NOT:
+- Intended to replace full stack frameworks like Django
+- An HTTP server
+- A presentation layer framework (but can be easily combined with other
+  free Python tools to make a nice presentation layer)
+- Might not be the best choice for simple classic web sites.
+

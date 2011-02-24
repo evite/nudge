@@ -14,7 +14,7 @@
 
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 import types
 import nudge
@@ -75,7 +75,7 @@ class Arg(object):
                 )
             try:
                 return self.validator(data)
-            except validate.ValidationError as e:
+            except (validate.ValidationError), e:
                 msg = "invalid value for argument '%s': '%s'" % (
                     self.name, 
                     data
@@ -228,6 +228,6 @@ def _get_json_body(req):
         body = nudge.json.json_decode(req.body)
         req.arguments['_body_dict'] = body # cache it
         return body
-    except ValueError:
+    except (ValueError):
         raise nudge.publisher.HTTPException(400, "body is not JSON")
 

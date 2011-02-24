@@ -1,2 +1,59 @@
+
+General Todo:
 * ENDPOINTS -> should only be one set. (nuke the tornado ones)
 * Support File objects (test currently disabled)
+* Allow more control on content type. For example, I may want to insist
+  that a post request comes in as json, or that the default output is something
+  other than json (maybe). For example, I always forget to add the Content-Type
+  header when testing posts, and instead of indicating that, it says I am
+  missing a particular variable. Would be more helpful to tell me i need json,
+  or assume it is and try to decode.
+  Perhaps we can allow a list of possible incoming content types per EP.
+
+
+
+(Tests):
+* More of all tests
+* Renderer tests
+* Validator tests
+* Generator tests
+* Tests for every possible exception flow in publisher
+* Unicode unicode unicode... in every input and output
+* Running with Tornado
+* Fallback app tests.
+
+Service Publisher:
+* We should consider passing encoded json strings as unicode strings always.
+* Tornado native support: Most tornado users do NOT use tornado's wsgi module, 
+  and we really need to support normal tornado requests. I think we already do,
+  but we should test this.
+* Look into the possibility of the fallback app: 
+
+Endpoints:
+* (This is currently done, but might be too strict)
+  The error_codes should really only be valid error codes, but im not
+  sure we want to be so tightly bound to HTTP in this way. On the other
+  hand, we want to avoid crashing our web server.
+* Print out which end point failed on failure
+
+Args:
+* The args checking in the endpoints might need more work?
+* Sanity checks for things like min, max in the arg class
+* Add the list and dict types
+
+Json:
+* We should either:
+** Make a pip requirements files for nudge which has simplejson or
+** Make json optional, and in that case default to html or something (I dont
+   like this idea).
+
+Types: Is the preferred way to type check with types.XXX ?
+
+Gen:
+* Docs
+* Javascript 
+* Maybe even simple jinja2 html forms.
+
+Maybe someday...
+* Test nudge to work with actual unicode strings for endpoint titles this might
+  be fun and useful for docs generation etc.

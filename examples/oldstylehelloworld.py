@@ -16,6 +16,13 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+"""
+This is an example of how things are done using tornado.
+
+This tends to lead to a lot of duplicated code.
+"""
+
+
 from optparse import OptionParser
 
 from nudge.json import json_decode

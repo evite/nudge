@@ -14,7 +14,7 @@
 
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 import base64
 from cStringIO import StringIO
@@ -26,9 +26,9 @@ __all__ = [
     'Json', 
     'Redirect',
     'CSS',
-    'IMG',
-    'IMGToB64String',
-    'IMGToString',
+    'Img',
+    'ImgToB64String',
+    'ImgToString',
     'Binary',
     'HTML',
     'Ical',
@@ -106,9 +106,19 @@ class CSS(object):
             http_status=200,
         )
 
-class IMG(object):
+class Img(object):
 
-    #expects {'img_url':url, 'data': img_data, 'content_type;: 'img/IMGTYPE'}
+    # expects img.data, img.type
+    def __call__(self, img):
+        return Result(
+            content=img.data,
+            content_type="image" + img.type,
+            http_status=200,
+        )
+
+class ImgOrRedirect(object):
+
+    # expects {'img_url':url, 'data': img_data, 'content_type;: 'img/IMGTYPE'}
     def __call__(self, content):
         if content.data:
             return Result(
@@ -136,7 +146,7 @@ class IMG(object):
                 http_status=302,
             )
             
-class IMGToB64String(object):
+class ImgToB64String(object):
     
     def __call__(self, content):
         out = StringIO()
@@ -149,7 +159,7 @@ class IMGToB64String(object):
             http_status=200,
         )
 
-class IMGToString(object):
+class ImgToString(object):
     
     def __call__(self, content):
         out = StringIO()

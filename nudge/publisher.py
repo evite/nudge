@@ -14,16 +14,17 @@
 
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 import cgi
+import logging
+import re
+import sys
+import types
 import time
 import types
-import re
-import logging
-import types
-import urlparse
-import sys
+import urllib
+import warnings
 
 import nudge.json
 import nudge.arg as args
@@ -82,6 +83,7 @@ responses = {
   415: 'Unsupported Media Type',
   416: 'Requested Range Not Satisfiable',
   417: 'Expectation Failed',
+  418: 'I\'m a teapot',
 
   500: 'Internal Server Error',
   501: 'Not Implemented',
@@ -100,6 +102,7 @@ class Endpoint(object):
 
     def __init__(self, name=None, method=None, uri=None, function=None, 
                  args=None, exceptions=None, renderer=None):
+        # Someday support unicode here, for now only bytestrings.
         assert isinstance(name, str)
         assert isinstance(method, str)
         assert isinstance(uri, str)
@@ -107,6 +110,28 @@ class Endpoint(object):
             type(function)
         assert not exceptions or isinstance(exceptions, dict), \
             "exceptions must be a dict, but was type %s" % type(exceptions)
+        if exceptions:
+            for exception, error_code in exceptions.items():
+                # Make sure it is a real Exception
+                if not issubclass(exception, Exception):
+                    raise TypeError(
+                        "Endpoint exceptions must be subclasses of Exception "
+                    )
+                # Make sure the error_codes are valid. This may be too tightly
+                # restricted.
+                if not isinstance(error_code, int) or \
+                        error_code not in responses:
+                    raise TypeError(
+                        "Invalid endpoint exception error code %s" \
+                            % (error_code)
+                    )
+        if exceptions and renderer and isinstance(renderer, ExceptionRenderer):
+            warnings.warn(
+                "Using an Endpoint's exceptions object and an "+\
+                "ExceptionRenderer is meaningless. Only the "+\
+                "ExceptionRenderer will be used by Nudge when specified.",
+                SyntaxWarning
+            )
 
         self.name = name
         self.method = method
@@ -145,7 +170,7 @@ class WSGIRequest(object):
                     self.arguments[a[0]].append(a[1])
                 else:
                     self.arguments[a[0]] = [a[1]]
-        except Exception, e:
+        except (Exception), e:
             _log.error(
                 'problem making arguments out of QUERY_STRING: %s', 
                 req['QUERY_STRING']
@@ -180,9 +205,11 @@ class ServicePublisher(object):
         if self._debug:
             _log.setLevel(logging.DEBUG)
             _root_log.setLevel(logging.DEBUG)
-        self._endpoints = endpoints
-        if not endpoints:
-            self._endpoints = []
+        self._endpoints = []
+        if endpoints:
+            assert isinstance(endpoints, list), "endpoints must be a list"
+            for ep in endpoints:
+                self.add_endpoint(ep)
         self._fallbackapp = fallbackapp
 
     def add_endpoint(self, endpoint):
@@ -210,14 +237,14 @@ class ServicePublisher(object):
         final_content = ""
         endpoint = None
         try:
-        # allow '_method' query arg to overide method
+            # allow '_method' query arg to overide method
             method = req.method
             if '_method' in req.arguments:
                 method = req.arguments['_method'][0].upper()
                 del req.arguments['_method']
 
             # find appropriate endpoint
-            reqline = method + urlparse.unquote(req.path)
+            reqline = method + urllib.unquote(req.path)
             match = None
             for endpoint in self._endpoints:
                 match = endpoint.regex.match(reqline)
@@ -256,7 +283,7 @@ class ServicePublisher(object):
                         if isinstance(body, types.DictType):
                             inargs = dict(inargs, **body)
 
-                    except ValueError:
+                    except (ValueError):
                         raise HTTPException(400, "body is not JSON")
 
             # compile positional arguments
@@ -289,6 +316,7 @@ class ServicePublisher(object):
                 response, content_type, http_status, extra_headers = \
                     r.content, r.content_type, r.http_status, r.headers
             else:
+                # Nudge gives back json by default
                 http_status = 200
                 content_type = 'application/json; charset=UTF-8'
                 response = nudge.json.json_encode(result)
@@ -303,19 +331,20 @@ class ServicePublisher(object):
                 extra_headers
             )
 
-        except Exception as e:
+        except (Exception), e:
             if self._debug:
                 _log.exception(e)
             else:
                 _log.error(e)
             trans = endpoint.renderer
             if trans and isinstance(trans, ExceptionRenderer):
-                """ Our renderer is supposed to handle exceptions """
+                """ This renderer is supposed to handle exceptions """
                 try:
                     r = trans.handle_exception(e)
-                except Exception as e:
+                except (Exception), e:
                     http_status = 500
                     try:
+                        # Sometimes the repr doesn't work so well here
                         _log.error(repr(e.__dict__))
                         msg = e.message
                     except:
@@ -357,6 +386,7 @@ class ServicePublisher(object):
             else:
                 http_status = 500
                 if endpoint.exceptions and e.__class__ in endpoint.exceptions:
+                    # Our endpoint specified this exception
                     http_status = endpoint.exceptions[e.__class__]
                     try:
                         final_content = _error_response(
@@ -366,7 +396,7 @@ class ServicePublisher(object):
                             e.message, 
                             **e.__dict__
                         )
-                    except Exception as e:
+                    except (Exception), e:
                         _log.exception('Error Handling Exception')
                         final_content = _error_response(
                             req, 
@@ -466,31 +496,61 @@ def serve(service_description, args=None):
     if not args:
         args = sys.argv
 
+    #
+    # TODO:
+    # use arg parse
+    # See if we can force the types
+    # Print warnings for meaningless options
+    # Print a nudge message before starting server
+    #
     from optparse import OptionParser
     parser = OptionParser()
-    parser.add_option("-p", "--port", dest="port", help="port to run on", default=8080)
-    parser.add_option("-t", "--threaded", dest="threaded", help="run as a threaded server (paste)", default=False)
-    parser.add_option("-n", "--threads", dest="threads", help="number of worker threads (only honored if --threaded)", default=15)
-    parser.add_option("-b", "--backlog", dest="backlog", help="maximum number of queued connections (only honored if --threaded)", default=5)
-    parser.add_option("-d", "--debug", action="store_true", dest="debug", help="setup nudge in debug mode (extra color logging)", default=False)
+    parser.add_option(
+        "-p", "--port", dest="port", help="port to run on", default=8080)
+    parser.add_option(
+        "-s", "--server", dest="server", 
+        help="which http server to use", default="eventlet")
+    # parser.add_option(
+        # "-t", "--threaded", dest="threaded", 
+        # help="run as a threaded server (paste)", default=False)
+    parser.add_option(
+        "-n", "--threads", dest="threads", 
+        help="number of worker threads (only honored if --threaded)", 
+        default=15)
+    parser.add_option(
+        "-b", "--backlog", dest="backlog", 
+        help="maximum number of queued connections (only used if --threaded)", 
+        default=5)
+    parser.add_option(
+        "-d", "--debug", action="store_true", dest="debug", 
+        help="setup nudge in debug mode (extra color logging)", default=False)
+
     (options, args) = parser.parse_args(args)
 
     if options.debug:
         import nudge.log
 
-    sp = ServicePublisher(debug=options.debug)
-    for endpoint in service_description:
-        sp.add_endpoint(endpoint)
+    sp = ServicePublisher(
+        endpoints=service_description,
+        debug=options.debug
+    )
 
     port = int(options.port)
-    if str(options.threaded).strip().lower() == 'true':
+    if str(options.server).strip().lower() == 'paste':
         print "Running paste (multithreaded) on %d" % (port)
         import paste.httpserver
         threads = int(options.threads)
         backlog = int(options.backlog)
-        paste.httpserver.serve(sp, host=None, port=port,
-                               use_threadpool=True, threadpool_workers=threads, threadpool_options=None,
-                               request_queue_size=backlog)
+        paste.httpserver.serve(
+            sp, host=None, port=port, use_threadpool=True, 
+            threadpool_workers=threads, threadpool_options=None,
+            request_queue_size=backlog
+        )
+    elif str(options.server).strip().lower() == 'gae':
+        from google.appengine.ext.webapp.util import run_wsgi_app
+        run_wsgi_app(sp)
+    elif str(options.server).strip().lower() == 'tornado':
+        pass
     else:
         print "starting eventlet server on port %i" % port
         import eventlet.wsgi
@@ -499,3 +559,4 @@ def serve(service_description, args=None):
             sp,
             max_size=100,
         )
+
