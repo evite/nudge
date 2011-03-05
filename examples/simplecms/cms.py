@@ -19,10 +19,7 @@
 
 """
 A more complicated example: A mini cms implementation designed 
-to run using Google App Engine, Tornado, or Eventlet.
-
-Persistent storage support abstracted to work with Google App Engine or
-SQLAlchemy.
+to run using Google App Engine.
 
 The aim of this example is to show how you would/could support multiple 
 types of content, and handle error cases differently.
