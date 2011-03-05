@@ -296,7 +296,6 @@ class ServicePublisher(object):
             # add any arguments from JSON body
             if method in ('POST', 'PUT'):
                 content_type = req.headers.get("Content-Type", '')
-                print "Content type", content_type
                 # add form args
                 if content_type.startswith("application/x-www-form-urlencoded"):
                     for name, values in cgi.parse_qs(req.body).iteritems():

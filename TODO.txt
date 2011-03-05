@@ -39,7 +39,18 @@ Endpoints:
 Args:
 * The args checking in the endpoints might need more work?
 * Sanity checks for things like min, max in the arg class
+* List sanity min and max checks must be 0 <= inf. Same with dict
 * Add the list and dict types
+* I feel like the optional shouldn't be a part of the args spec. We should look
+  to see if this arg exists, and if not, do nothing, otherwise use all the 
+  validators
+* Go through the optional handling for each type. It looks like string and 
+  others do the wrong thing when optional.
+* Check client IP against a couple diff servers like nginx and haproxy. Also
+  make sure it get the very first x-forwarded-for
+* We should remove anything json from args. Args will be found in the jsonbody
+  if the content type is successfully set
+* _get_json_body - Shouldnt this be in json.py?
 
 Json:
 * We should either:

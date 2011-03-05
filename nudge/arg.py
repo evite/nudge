@@ -33,6 +33,8 @@ __all__ = [
     'Action',
     'JsonBody',
     'JsonBodyField',
+    'List',
+    'Dict',
 ]
 
 class Arg(object):
@@ -105,6 +107,28 @@ class String(Arg):
             validator=validator
         )
 
+class Dict(Arg): 
+
+    def __init__(self, name, min_=None, max_=None, 
+                 optional=False):
+        super(Dict, self).__init__(
+            name, 
+            optional, 
+            default=None, 
+            validator=validate.Dict(min_, max_)
+        )
+
+class List(Arg): 
+
+    def __init__(self, name, min_=None, max_=None, 
+                 optional=False):
+        super(List, self).__init__(
+            name, 
+            optional, 
+            default=None, 
+            validator=validate.List(min_, max_)
+        )
+
 class Boolean(Arg):
     validator = validate.Boolean()
 
@@ -166,11 +190,14 @@ class UploadedFile(CustomArg):
 class JsonBody(CustomArg):
     """ Checks that there's a valid JSON message body, converts this into
         a dict. It optionally adds specified entries to the dict and
-        ultimately returns it
+        ultimately returns it.
        
         Note: if the request is a POST or a PUT, and the content type is
         application/json, the json body will be decoded and added to the arg
         dict (so you dont need to use this, you can use normal args).
+
+        You might use this in the case where you want the json body object
+        as a single arg (maybe the body is very large)
     """
 
     def __init__(self, optional=False, extend={}):

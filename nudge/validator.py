@@ -34,6 +34,8 @@ __all__ = [
     'StringAlternatives',
     'Boolean', 
     'Json', 
+    'List', 
+    'Dict', 
 ]
 
 class ValidationError(BaseException):
@@ -90,6 +92,28 @@ def Int(min_=None, max_=None):
             raise ValidationError("must be <= %d" % max_)
             
         return i
+    return f
+
+def List(min_=None, max_=None):
+    def f(s):
+        if not isinstance(s, list):
+            raise ValidationError("must be of type list")
+        if min_ and len(s) < min_:
+            raise ValidationError("list length must be gte %i" % (min_))
+        if max_ and len(s) > max_:
+            raise ValidationError("list length must be lte %i" % (max_))
+        return s
+    return f
+
+def Dict(min_=None, max_=None):
+    def f(s):
+        if not isinstance(s, dict):
+            raise ValidationError("must be of type dict")
+        if min_ and len(s) < min_:
+            raise ValidationError("dict length must be gte %i" % (min_))
+        if max_ and len(s) > max_:
+            raise ValidationError("dict length must be lte %i" % (max_))
+        return s
     return f
 
 def Float(min_=None, max_=None):
