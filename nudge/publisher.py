@@ -208,7 +208,7 @@ class WSGIRequest(object):
                 if a[0] in _arguments:
                     _arguments[a[0]].append(a[1])
                 else:
-                    self.arguments[a[0]] = [a[1]]
+                    _arguments[a[0]] = [a[1]]
         except (Exception), e:
             _log.error(
                 'problem making arguments out of QUERY_STRING: %s', 
