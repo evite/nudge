@@ -553,21 +553,36 @@ class ArgTest(unittest.TestCase):
 
     # List and Dict args must come from the json body
     def test_list_in_body(self):
-        req = create_req({
-            "body":'{"test":[]}',
+        req = create_json_post_req({
+            "body":'{"test":[1,2]}',
             "REQUEST_METHOD":"POST",
         })
         i = args.List("test")
-        self.assertEqual([], i.argspec(req, None))
+        self.assertEqual([1,2], i.argspec(req, None))
 
     @raises(servicepublisher.HTTPException)
     def test_list_in_body_fail(self):
-        req = create_req({
-            "headers":{"Content-Type":"application/json"}, 
+        req = create_json_post_req({
             "arguments":{},"body":'{"test":1}',
             "REQUEST_METHOD":"POST",
         })
         i = args.List("test")
         self.assertEqual([], i.argspec(req, None))
 
+    def test_dict_in_body(self):
+        req = create_json_post_req({
+            "body":'{"test":{"two":3}}',
+            "REQUEST_METHOD":"POST",
+        })
+        i = args.Dict("test")
+        self.assertEqual({"two":3}, i.argspec(req, None))
+
+    @raises(servicepublisher.HTTPException)
+    def test_dict_in_body_fail(self):
+        req = create_json_post_req({
+            "arguments":{},"body":'{"test":1}',
+            "REQUEST_METHOD":"POST",
+        })
+        i = args.Dict("test")
+        self.assertEqual([], i.argspec(req, None))
 

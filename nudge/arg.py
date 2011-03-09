@@ -64,7 +64,9 @@ class Arg(object):
                         "%s is required" % self.name
                     )
 
-            if type(data) in [types.ListType]:
+            # Query string args will come in list format, take the first.
+            # Unless of course we are expecting a list from the json body.
+            if type(data) in [types.ListType] and not isinstance(self, List):
                 data = data[0]
 
             try:
