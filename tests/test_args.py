@@ -235,6 +235,126 @@ class ValidatorTest(unittest.TestCase):
         for input in inputs:
             b(input)
 
+    #
+    # List validator tests
+    #
+    def test_list(self):
+        inputs = [
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9],
+        ]
+        val_func = vals.List()
+        for input in inputs:
+            val_func(input)
+
+    @raises(vals.ValidationError)
+    def test_list_fail(self):
+        inputs = [
+            {},
+            [4, 5, 6],
+            [7, 8, 9],
+        ]
+        val_func = vals.List()
+        for input in inputs:
+            val_func(input)
+
+    def test_list_min(self):
+        inputs = [
+            [1, 2, 3],
+        ]
+        val_func = vals.List(min_=1)
+        for input in inputs:
+            val_func(input)
+
+    @raises(vals.ValidationError)
+    def test_list_min_fail(self):
+        inputs = [
+            [1, 2, 3],
+        ]
+        val_func = vals.List(min_=5)
+        for input in inputs:
+            val_func(input)
+
+    def test_list_max(self):
+        inputs = [
+            [1, 2, 3],
+        ]
+        val_func = vals.List(max_=3)
+        for input in inputs:
+            val_func(input)
+
+    @raises(vals.ValidationError)
+    def test_list_max_fail(self):
+        inputs = [
+            [1, 2, 3],
+        ]
+        val_func = vals.List(max_=2)
+        for input in inputs:
+            val_func(input)
+
+    #
+    # Dict validator tests
+    #
+    def test_dict(self):
+        inputs = [
+            {"test":"skickass"},
+            {"we": "dont", "care":{"about":0,"sub": "types"}},
+        ]
+        val_func = vals.Dict()
+        for input in inputs:
+            val_func(input)
+
+    @raises(vals.ValidationError)
+    def test_dict_fail(self):
+        inputs = [
+            [],
+            {"test":"skickass"},
+            {"we": "dont", "care":{"about":0,"sub": "types"}},
+        ]
+        val_func = vals.Dict()
+        for input in inputs:
+            val_func(input)
+
+    def test_dict_min(self):
+        inputs = [
+            {"test":"skickass"},
+            {"we": "dont", "care":{"about":0,"sub": "types"}},
+        ]
+        val_func = vals.Dict(min_=1)
+        for input in inputs:
+            val_func(input)
+
+    @raises(vals.ValidationError)
+    def test_dict_min_fail(self):
+        inputs = [
+            {"test":"skickass"},
+            {"we": "dont", "care":{"about":0,"sub": "types"}},
+        ]
+        val_func = vals.Dict(min_=5)
+        for input in inputs:
+            val_func(input)
+
+    def test_dict_max(self):
+        inputs = [
+            {"test":"skickass"},
+            {"we": "dont", "care":{"about":0,"sub": "types"}},
+        ]
+        val_func = vals.Dict(max_=3)
+        for input in inputs:
+            val_func(input)
+
+    @raises(vals.ValidationError)
+    def test_dict_max_fail(self):
+        inputs = [
+            [],
+            {"test":"skickass"},
+            {"we": "dont", "care":{"about":0,"sub": "types"}},
+        ]
+        val_func = vals.Dict(max_=1)
+        for input in inputs:
+            val_func(input)
+
 
 _base_environ = {
     "REQUEST_METHOD": "GET",
@@ -428,4 +548,24 @@ class ArgTest(unittest.TestCase):
         self.assertNotEqual("nottest", ca.argspec("test"))
         self.assertNotEqual(invalidator(None), ca.argspec(None))
         self.assertNotEqual(invalidator, ca.argspec)
+
+    # List and Dict args must come from the json body
+    def test_list_in_body(self):
+        req = create_req({
+            "body":'{"test":[]}',
+            "REQUEST_METHOD":"POST",
+        })
+        i = args.List("test")
+        self.assertEqual([], i.argspec(req, None))
+
+    @raises(servicepublisher.HTTPException)
+    def test_list_in_body_fail(self):
+        req = create_req({
+            "headers":{"Content-Type":"application/json"}, 
+            "arguments":{},"body":'{"test":1}',
+            "REQUEST_METHOD":"POST",
+        })
+        i = args.List("test")
+        self.assertEqual([], i.argspec(req, None))
+
 
