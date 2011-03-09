@@ -20,6 +20,7 @@ import datetime
 import time
 import unittest
 import urlparse
+import StringIO
 
 import nudge.validator 
 
@@ -28,7 +29,7 @@ import nudge.json as json
 import nudge.publisher as sp
 
 import httplib
-from nudge.publisher import ServicePublisher, Endpoint, Args
+from nudge.publisher import ServicePublisher, Endpoint, Args, WSGIRequest
 from nudge.renderer import Result
 
 from nose.tools import raises
@@ -73,35 +74,18 @@ class MockResponse(object):
         return "%s(%s)" % (self.__class__.__name__, args)
 
 
-class MockRequest(json.JsonSerializable):
-    def __init__(self, method, uri, version='HTTP/1.1', arguments={}, remote_ip='127.0.0.1', headers={}, body=''):
-        self.buf = ''
-        self.method = method
-        self.uri = uri
-        self.path = urlparse.urlsplit(uri)[2]
-        self.version = version
-        self.arguments = arguments
-        self.remote_ip = remote_ip
-        self.headers = headers
-        self.body = body
-
-    def write(self, s):
-        self.buf += s
-
-    def arguments(self):
-        return self.arguments
-
-    def finish(self):
-        pass
-
-    def remote_ip(self):
-        return self.remote_ip
-
-    def request_time(self):
-        return time.time()
-
-    def headers(self):
-        return self.headers
+def create_req(method, uri, version='HTTP/1.1', arguments={}, remote_ip='127.0.0.1', headers={}, body=''):
+    env = {
+        "REQUEST_METHOD": method.upper(),
+        "CONTENT_TYPE": "application/json",
+        "PATH_INFO": uri,
+        "HTTP_HOST": "localhost",
+        "REMOTE_ADDR": remote_ip,
+        "wsgi.url_scheme": "http",
+        "arguments": args,
+    }
+    env['wsgi.input'] = StringIO.StringIO(body)
+    return WSGIRequest(env)
 
 
 def response_buf(http_status, content, content_type='application/json; charset=UTF-8', headers={}, end='\r\n'):
@@ -116,6 +100,7 @@ def response_buf(http_status, content, content_type='application/json; charset=U
     return "\r\n".join(lines) + "\r\n\r\n" + content
 
 class StupidTest(unittest.TestCase):
+
     def test_write(self):
         req = json.Dictomatic({"_buffer":""})
         sp._write(req, "test")
@@ -143,6 +128,7 @@ class StupidTest(unittest.TestCase):
 
 
 class WSGIRequestTest(unittest.TestCase):
+
     def test_request_fail(self):
         class FooBar():
             def read(self):
@@ -160,27 +146,28 @@ class WSGIRequestTest(unittest.TestCase):
         self.assertTrue((time.time() - req.start_time < req.request_time()))
 
 class HandlerTest(unittest.TestCase):
+
     def test_noargs_handlersuccess(self):
         def handler(): return dict(called=1)
 
         sp = ServicePublisher()
         sp.add_endpoint(Endpoint(name='', method='GET', uri='/location', function=handler))
-        req = MockRequest('GET', '/location')
+        req = create_req('GET', '/location')
         resp = MockResponse(req, 200)
         result = sp(req, resp.start_response)
         resp.write(result)
-        self.assertEqual(req.buf,response_buf(200, '{"called": 1}'))
+        self.assertEqual(req._buffer,response_buf(200, '{"called": 1}'))
         
     def test_noargs_handlersuccess_empty(self):
         def handler(): return None
 
         sp = ServicePublisher()
         sp.add_endpoint(Endpoint(name='', method='GET', uri='/location', function=handler))
-        req = MockRequest('GET', '/location')
+        req = create_req('GET', '/location')
         resp = MockResponse(req, 200)
         result = sp(req, resp.start_response)
         resp.write(result)
-        self.assertEqual(req.buf,response_buf(404, '{"message": null, "code": 404}'))
+        self.assertEqual(req._buffer,response_buf(404, '{"message": null, "code": 404}'))
 
 
     def test_noargs_handlerfail(self):
@@ -188,11 +175,11 @@ class HandlerTest(unittest.TestCase):
 
         sp = ServicePublisher()
         sp.add_endpoint(Endpoint(name='', method='GET', uri='/location', function=handler))
-        req = MockRequest('GET', '/location')
+        req = create_req('GET', '/location')
         resp = MockResponse(req, 200)
         result = sp(req, resp.start_response)
         resp.write(result)
-        self.assertEqual(req.buf,response_buf(500, '{"exception_class": "<type \'exceptions.Exception\'>", "message": "Unhandled Exception", "code": 500}'))
+        self.assertEqual(req._buffer,response_buf(500, '{"exception_class": "<type \'exceptions.Exception\'>", "message": "Unhandled Exception", "code": 500}'))
 
 
     def test_matchfailure(self):
@@ -200,55 +187,55 @@ class HandlerTest(unittest.TestCase):
 
         sp = ServicePublisher()
         sp.add_endpoint(Endpoint(name='', method='GET', uri='/location', function=handler))
-        req = MockRequest('GET', '/blah')
+        req = create_req('GET', '/blah')
         resp = MockResponse(req, 200)
         result = sp(req, resp.start_response)
         resp.write(result)
-        self.assertEqual(req.buf,response_buf(404, '{"message": null, "code": 404}'))
+        self.assertEqual(req._buffer,response_buf(404, '{"message": null, "code": 404}'))
 
     def test_noargs_but_method_handlersuccess(self):
         def handler(): return dict(arg1=1)
 
         sp = ServicePublisher()
         sp.add_endpoint(Endpoint(name='', method='DELETE', uri='/location', function=handler))
-        req = MockRequest('GET', '/location', arguments=dict(_method=['delete']))
+        req = create_req('DELETE', '/location', arguments=dict(_method=['delete']))
         resp = MockResponse(req, 200)
         result = sp(req, resp.start_response)
         resp.write(result)
-        self.assertEqual(req.buf,response_buf(200, '{"arg1": 1}'))
+        self.assertEqual(req._buffer,response_buf(200, '{"arg1": 1}'))
 
 
     def test_arg_handlersuccess(self):
         def handler(*args, **kwargs): return dict(arg1=1)
         sp = ServicePublisher()
         sp.add_endpoint(Endpoint(name='', method='POST', uri='/location', args=([args.String('test')],{}), function=handler))
-        req = MockRequest('POST', '/location', arguments=dict(test="blah"), headers={"Content-Type":"application/json"}, body='{"test":"foo"}')
+        req = create_req('POST', '/location', arguments=dict(test="blah"), headers={"Content-Type":"application/json"}, body='{"test":"foo"}')
         resp = MockResponse(req, 200)
         result = sp(req, resp.start_response)
         resp.write(result)
-        self.assertEqual(req.buf,response_buf(200, '{"arg1": 1}'))
+        self.assertEqual(req._buffer,response_buf(200, '{"arg1": 1}'))
         
 
     def test_arg_handlersuccess_part_deux(self):
         def handler(*args, **kwargs): return dict(arg1=1)
         sp = ServicePublisher()
         sp.add_endpoint(Endpoint(name='', method='POST', uri='/location', args=([],{"test1":args.String('test', optional=True)}), function=handler))
-        req = MockRequest('POST', '/location', arguments=dict(test="blah"), headers={"Content-Type":"application/json"}, body='{"test1":"foo"}')
+        req = create_req('POST', '/location', arguments=dict(test="blah"), headers={"Content-Type":"application/json"}, body='{"test1":"foo"}')
         resp = MockResponse(req, 200)
         result = sp(req, resp.start_response)
         resp.write(result)
-        self.assertEqual(req.buf,response_buf(200, '{"arg1": 1}'))
+        self.assertEqual(req._buffer,response_buf(200, '{"arg1": 1}'))
         
 
-    def test_arg_handlersuccess(self):
+    def test_arg_handlersuccess_part_tre(self):
         def handler(*args, **kwargs): return dict(arg1=1)
         sp = ServicePublisher()
         sp.add_endpoint(Endpoint(name='', method='POST', uri='/location', args=([args.String('test')],{}), function=handler))
-        req = MockRequest('POST', '/location', arguments=dict(test="blah"), headers={"Content-Type":"application/json"}, body='{"test"="foo"}')
+        req = create_req('POST', '/location', arguments=dict(test="blah"), headers={"Content-Type":"application/json"}, body='{"test"="foo"}')
         resp = MockResponse(req, 500)
         result = sp(req, resp.start_response)
         resp.write(result)
-        self.assertEqual(req.buf,response_buf(400, '{"message": "body is not JSON", "code": 400}'))
+        self.assertEqual(req._buffer,response_buf(400, '{"message": "body is not JSON", "code": 400}'))
 
 
 class RendererTest(unittest.TestCase):
@@ -264,11 +251,11 @@ class RendererTest(unittest.TestCase):
 
         sp = ServicePublisher()
         sp.add_endpoint(Endpoint(name='', method='GET', uri='/location', function=handler, renderer=renderer))
-        req = MockRequest('GET', '/location')
+        req = create_req('GET', '/location')
         resp = MockResponse(req, 200)
         result = sp(req, resp.start_response)
         resp.write(result)
-        self.assertEqual(req.buf,
+        self.assertEqual(req._buffer,
             response_buf(302, 'moved', content_type='text/html', headers={'Location': 'new_location' })
         )
     
@@ -284,11 +271,11 @@ class RendererTest(unittest.TestCase):
 
         sp = ServicePublisher()
         sp.add_endpoint(Endpoint(name='', method='GET', uri='/location', function=handler, renderer=renderer))
-        req = MockRequest('GET', '/location')
+        req = create_req('GET', '/location')
         resp = MockResponse(req, 200)
         result = sp(req, resp.start_response)
         resp.write(result)
-        self.assertEqual(req.buf,
+        self.assertEqual(req._buffer,
             response_buf(302, 'moved', content_type='text/html', headers={'Location': 'new_location' })
         )
     

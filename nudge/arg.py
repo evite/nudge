@@ -49,9 +49,11 @@ class Arg(object):
                 raise AttributeError(
                     "Arg has no validator for property: '%s'" % self.name
                 )
-            body = _get_json_body(req)
-            if self.name not in (body or {}) and self.name not in \
-                (req.arguments or {}) and self.name not in (inargs or {}):
+
+            data = req.arguments.get(self.name) if req.arguments else None
+            if not data and inargs:
+                data = inargs.get(self.name)
+            if data == None:
                 if default:
                     return default
                 elif self.optional:
@@ -61,20 +63,10 @@ class Arg(object):
                         400, 
                         "%s is required" % self.name
                     )
-            data = None
-            if self.name in (body or {}):
-                data = body.get(self.name, self.default)
-            elif self.name in (req.arguments or {}):
-                data = req.arguments.get(self.name, self.default)
-                if isinstance(data, types.ListType) and len(data) == 1:
-                    data = data[0]
-            elif self.name in (inargs or {}):
-                data = inargs[self.name]
-            if not data and not self.optional:
-                raise nudge.publisher.HTTPException(
-                    400, 
-                    "%s is required" % self.name
-                )
+
+            if type(data) in [types.ListType]:
+                data = data[0]
+
             try:
                 return self.validator(data)
             except (validate.ValidationError), e:

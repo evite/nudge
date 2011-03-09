@@ -214,6 +214,23 @@ class WSGIRequest(object):
                 'problem making arguments out of QUERY_STRING: %s', 
                 self.req['QUERY_STRING']
             )
+
+        # add any arguments from JSON body
+        if self.method in ('POST', 'PUT') and self.body:
+            content_type = self.headers.get("Content-Type", '')
+            # add form args
+            if content_type.startswith("application/x-www-form-urlencoded"):
+                for name, values in cgi.parse_qs(self.body).iteritems():
+                    _arguments.setdefault(name, []).extend(values)
+            elif content_type.startswith("application/json"):
+                try:
+                    body = nudge.json.json_decode(self.body)
+                    if isinstance(body, types.DictType):
+                        _arguments = dict(_arguments, **body)
+
+                except (ValueError):
+                    raise HTTPException(400, "body is not JSON")
+
         return _arguments
 
     def write(self, content):
@@ -292,23 +309,6 @@ class ServicePublisher(object):
             arguments = dict((k, v[0]) for k, v in req.arguments.iteritems())
             inargs = dict(match.groupdict(), **arguments)
 
-            
-            # add any arguments from JSON body
-            if method in ('POST', 'PUT'):
-                content_type = req.headers.get("Content-Type", '')
-                # add form args
-                if content_type.startswith("application/x-www-form-urlencoded"):
-                    for name, values in cgi.parse_qs(req.body).iteritems():
-                        inargs.setdefault(name, []).extend(values)
-                elif content_type.startswith("application/json"):
-                    try:
-                        body = nudge.json.json_decode(req.body)
-                        if isinstance(body, types.DictType):
-                            inargs = dict(inargs, **body)
-
-                    except (ValueError):
-                        raise HTTPException(400, "body is not JSON")
-
             # compile positional arguments
             args = []
             for arg in endpoint.sequential:
@@ -359,7 +359,7 @@ class ServicePublisher(object):
                 _log.exception(e)
             else:
                 _log.error(e)
-            trans = endpoint.renderer
+            trans = endpoint.renderer if endpoint else None
             if trans and isinstance(trans, ExceptionRenderer):
                 """ This renderer is supposed to handle exceptions """
                 try:

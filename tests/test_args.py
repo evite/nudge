@@ -23,8 +23,6 @@ import StringIO
 
 from nose.tools import raises
 
-from test_publisher import MockResponse, MockRequest
-
 import nudge.arg as args
 import nudge.json as json
 import nudge.publisher as servicepublisher
@@ -370,6 +368,10 @@ def create_req(environ):
     new_env['wsgi.input'] = StringIO.StringIO(new_env.get('body', ''))
     return WSGIRequest(new_env)
 
+def create_json_post_req(environ):
+    environ['REQUEST_METHOD'] = 'POST'
+    return create_req(environ)
+
 class ArgTest(unittest.TestCase):
     
     def test_get_json_body(self):
@@ -456,17 +458,17 @@ class ArgTest(unittest.TestCase):
         self.assertEqual(None, rh.argspec(dictb, None))
 
     def test_string_in_body(self):
-        req = create_req({"headers":{"test":"something"}, "arguments":{},"body":'{"test":1}'})
+        req = create_json_post_req({"headers":{"test":"something"}, "arguments":{},"body":'{"test":1}'})
         i = args.String("test")
         self.assertEqual(1, i.argspec(req, None))
 
     def test_string_in_args(self):
-        req = create_req({"QUERY_STRING":"test=1"})
+        req = create_json_post_req({"QUERY_STRING":"test=1"})
         i = args.String("test")
         self.assertEqual("1", i.argspec(req, None))
 
     def test_string_in_inargs(self):
-        req = create_req({"headers":{"test":"something"}, "arguments":{},"body":'{}'})
+        req = create_json_post_req({"headers":{"test":"something"}, "arguments":{},"body":'{}'})
         i = args.String("test")
         self.assertEqual(1, i.argspec(req, {"test":1}))
 
@@ -499,7 +501,7 @@ class ArgTest(unittest.TestCase):
         # self.assertEqual({"filename":"toast", "data":"blah", "content_type":"foobar"}, i.argspec(req, None))
 
     def test_integer(self):
-        req = create_req({"headers":{"test":"something"}, "arguments":{},"body":'{"test":1}'})
+        req = create_json_post_req({"headers":{"test":"something"}, "arguments":{},"body":'{"test":1}'})
         i = args.Integer("test")
         self.assertEqual(1, i.argspec(req, None))
 
@@ -510,7 +512,7 @@ class ArgTest(unittest.TestCase):
         i.argspec(req, None)
 
     def test_plain_arg(self):
-        req = create_req({"headers":{"test":"something"}, "arguments":{},"body":'{"test":1}'})
+        req = create_json_post_req({"headers":{"test":"something"}, "arguments":{},"body":'{"test":1}'})
         def validator(s): return s
         a = args.Arg("test", optional=True, default="foobar", validator=validator)
         self.assertEqual(1, a.argspec(req, None))
