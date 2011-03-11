@@ -37,7 +37,6 @@ and output formatting.
 Anything HTTP should be possible with Nudge, but you may need to write an
 extension or two. See the simplecms example for some examples extending Nudge.
 """
-
 import nudge.arg as args
 from nudge import serve, Endpoint, Args
 from nudge.renderer import HTML
@@ -66,7 +65,13 @@ class HelloWorldService():
     def just_throw_an_exception(self):
         raise ExampleException("omg what did you do?")
 
+    def assert_false(self):
+        assert False, "False can never be True"
+
 hws = HelloWorldService()
+
+def handle_example_exception(e):
+    return 400, 'application/json', '{"exception":"bad request"}', None
 
 service_description = [
     Endpoint(name='Index',
@@ -106,8 +111,20 @@ service_description = [
         function=hws.just_throw_an_exception,
         args=Args(),
         exceptions={
-            ExampleException: 400,
+            ExampleException: handle_example_exception,
         }
+    ),
+    Endpoint(name='I just break',
+        method='GET',
+        uri='/break_fallback/?$',
+        function=hws.just_throw_an_exception,
+        args=Args(),
+    ),
+    Endpoint(name='I throw an assertion exception',
+        method='GET',
+        uri='/break_assertion/?$',
+        function=hws.assert_false,
+        args=Args(),
     )
 ]
 

@@ -27,7 +27,10 @@ This allows nudge (and in turn your service classes) to work with any
 wsgi compatible python http server (ours have run in production with 
 tornado and eventlet). It also allows for a very elegant api description, 
 and removes a ton of repeated and tedious http specific code typically
-found when developing under other web frameworks.
+found when developing under other web frameworks. 
+
+Since your application classes and funtions are abstracted from HTTP,
+writing tests has never been easier. No more HTTP simulation.
 
 Questions or comments about nudge? Join the google group!
 Google group: python-nudge

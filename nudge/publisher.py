@@ -118,6 +118,10 @@ class Endpoint(object):
         assert isinstance(uri, str)
         assert callable(function), "function must be callable, but was %s" %\
             type(function)
+
+        #
+        # EXPFIXME
+        #
         assert not exceptions or isinstance(exceptions, dict), \
             "exceptions must be a dict, but was type %s" % type(exceptions)
         if exceptions:
@@ -129,19 +133,12 @@ class Endpoint(object):
                     )
                 # Make sure the error_codes are valid. This may be too tightly
                 # restricted.
-                if not isinstance(error_code, int) or \
-                        error_code not in responses:
-                    raise TypeError(
-                        "Invalid endpoint exception error code %s" \
-                            % (error_code)
-                    )
-        if exceptions and renderer and isinstance(renderer, ExceptionRenderer):
-            warnings.warn(
-                "Using an Endpoint's exceptions object and an "+\
-                "ExceptionRenderer is meaningless. Only the "+\
-                "ExceptionRenderer will be used by Nudge when specified.",
-                SyntaxWarning
-            )
+                # if not isinstance(error_code, int) or \
+                        # error_code not in responses:
+                    # raise TypeError(
+                        # "Invalid endpoint exception error code %s" \
+                            # % (error_code)
+                    # )
 
         self.name = name
         self.method = method
@@ -239,9 +236,57 @@ class WSGIRequest(object):
     def request_time(self):
         return time.time() - self.start_time
 
+def _error_response(req, start_response, status_code, msg, **kwargs):
+    """
+        Unlike the tornado version, this error response starts the actual
+        response back to the client.
+    """
+    resp_dict = dict(kwargs)
+    resp_dict['code'] = status_code
+    resp_dict['message'] = msg
+
+    body = nudge.json.json_encode(resp_dict)
+
+    _log.error(
+        'Service Publisher error response: %s, %s', 
+        status_code,
+        req.uri
+    )
+
+    headers = []
+    headers.append(('Content-Type', 'application/json; charset=UTF-8'))
+
+    start_response(
+        str(status_code) + ' ' + responses[status_code], 
+        headers
+    )
+    return body
+
+
+class JsonError(object):
+    code = 500
+    content_type = "application/json; charset=UTF-8"
+    content = '{"message":"Unhandled exception", "code":500}'
+    headers = {}
+    def __call__(self, exp):
+        code = self.code
+        message = exp.message
+        if isinstance(exp, HTTPException):
+            code = exp.status_code
+            message = responses[code]
+        if isinstance(exp, AssertionError):
+            code = 400
+            _log.debug("Assertion error: %s", exp.message)
+        else:
+            _log.exception("Exception handled by JsonError")
+        content = {'message': message, 'code':code}
+        return code, self.content_type, \
+            nudge.json.json_encode(content), self.headers
+
 class ServicePublisher(object):
 
-    def __init__(self, fallbackapp=None, endpoints=None, debug=False):
+    def __init__(self, fallbackapp=None, endpoints=None, \
+                 debug=False, options=None):
         self._debug = debug
         if self._debug:
             _log.setLevel(logging.DEBUG)
@@ -252,6 +297,43 @@ class ServicePublisher(object):
             for ep in endpoints:
                 self.add_endpoint(ep)
         self._fallbackapp = fallbackapp
+
+        # TODO make some real defaults
+        self._options = Dictomatic({
+            "default_error_handler": JsonError(),
+        })
+        # error_response = self.options.default_error_response
+
+        if options:
+            assert isinstance(options, dict)
+            # TODO check each key to make sure we support it
+            self._options = options
+        self.verify_options()
+            
+    def verify_options(self):
+        assert isinstance(self._options.default_error_handler.code, int),\
+            "Default error handler http code must be an int"
+        assert self._options.default_error_handler.code in responses,\
+            "Default error handler http code invalid"
+        assert isinstance(self._options.default_error_handler.content_type, str),\
+            "Default error handler content_type must be a byte string"
+        assert isinstance(self._options.default_error_handler.content, str),\
+            "Default error handler content must be a byte string"
+        assert isinstance(self._options.default_error_handler.headers, dict),\
+            "Default error handler headers must be a dict"
+
+        for k, v in self._options.default_error_handler.headers:
+            assert isinstance(k, str),\
+                "Default error handler headers keys and values must be a byte string"
+            assert isinstance(v, str),\
+                "Default error handler headers keys and values must be a byte string"
+
+        self._options.default_error_response = (
+            self._options.default_error_handler.code,
+            self._options.default_error_handler.content_type,
+            self._options.default_error_handler.content,
+            self._options.default_error_handler.headers,
+        )
 
     def add_endpoint(self, endpoint):
         assert isinstance(endpoint, Endpoint)
@@ -293,6 +375,7 @@ class ServicePublisher(object):
                     break
 
             if not match:
+                # TODO: Handle HTTPException in new world exceptions
                 raise HTTPException(404)
                 #
                 # Fallback app is untested with WSGI/EVENTLET
@@ -345,103 +428,56 @@ class ServicePublisher(object):
                 response = nudge.json.json_encode(result)
                 extra_headers = {}
 
-            final_content = _finish_request(
-                req, 
-                start_response, 
-                http_status, 
-                response, 
-                content_type, 
-                extra_headers
-            )
-
+           
         except (Exception), e:
-            if self._debug:
-                _log.exception(e)
-            else:
-                _log.error(e)
-            trans = endpoint.renderer if endpoint else None
-            if trans and isinstance(trans, ExceptionRenderer):
-                """ This renderer is supposed to handle exceptions """
+            # Initialize error response tuple
+            error_response = None
+            if endpoint.exceptions:
                 try:
-                    r = trans.handle_exception(e)
+                    error_response = handle_exception(e, endpoint.exceptions)
                 except (Exception), e:
-                    http_status = 500
-                    try:
-                        # Sometimes the repr doesn't work so well here
-                        _log.error(repr(e.__dict__))
-                        msg = e.message
-                    except:
-                        msg = "Error Handling Exception"
-                        _log.exception(msg)
-                    final_content = _error_response(
-                        req,
-                        start_response,
-                        http_status,
-                        msg,
-                    )
-                if not final_content:
-                    """ Our renderer handled the error correctly """
-                    http_status = r.http_status
-                    final_content = _finish_request(
-                        req,
-                        start_response,
-                        r.http_status,
-                        r.content,
-                        r.content_type,
-                        r.headers
-                    )
-            elif isinstance(e, HTTPException):
-                http_status = e.status_code
-                final_content = _error_response(
-                    req, 
-                    start_response, 
-                    http_status, 
-                    e.message
-                )
-            elif isinstance(e, AssertionError):
-                http_status = 400
-                final_content = _error_response(
-                    req, 
-                    start_response, 
-                    http_status, 
-                    e.message
-                )
-            else:
-                http_status = 500
-                if endpoint.exceptions and e.__class__ in endpoint.exceptions:
-                    # Our endpoint specified this exception
-                    http_status = endpoint.exceptions[e.__class__]
-                    try:
-                        final_content = _error_response(
-                            req, 
-                            start_response, 
-                            http_status, 
-                            e.message, 
-                            **e.__dict__
-                        )
-                    except (Exception), e:
-                        _log.exception('Error Handling Exception')
-                        final_content = _error_response(
-                            req, 
-                            start_response, 
-                            500, 
-                            'Error Handling Exception'
-                        )
-                else:
-                    final_content = _error_response(
-                        req, 
-                        start_response, 
-                        500, 
-                        'Unhandled Exception',
-                        exception_class=str(e.__class__)
-                    )
-                    _log.exception('Unhandled Exception')
+                    _log.warn("Endpoint failed to handle exception", e)
+
+            if not error_response:
+                try:
+                    # Try one more time to handle a base exception
+                    error_response = self._options.default_error_handler(e)
+                except (Exception), e:
+                    _log.exception("Default error handler failed to handle exception")
+
+            http_status, content_type, response, extra_headers = error_response \
+                    or self._options.default_error_response
+
+        final_content = _finish_request(
+            req, 
+            start_response, 
+            http_status, 
+            response, 
+            content_type, 
+            extra_headers
+        )
+
         _log_access(req, http_status)
         return [final_content + "\r\n"]
 
+def handle_exception(exp, exp_handlers):
+    # Check if this endpoint can handle this exception
+    if exp_handlers and exp.__class__ in exp_handlers:
+        exp_handler = exp_handlers[exp.__class__]
+        if callable(exp_handler):
+            # TODO maybe give e the req and start response, maybe add
+            # a finished var to track if e handled everything
+            return exp_handler(exp)
+        else:
+            # Handle 'simple' tuple based exception handler (not callable)
+            return exp_handler
+    _log.exception("Unhandled exception class: %s", exp.__class__)
+    raise exp
+
 def _finish_request(req, start_response, http_status, 
                     response, content_type, extra_headers):
-
+    # TODO: this probably shouldnt be called in more than one place
+    # Check http_status, content_type, and extra_headers for validity
     # Our response must be a byte string
     if isinstance(response, unicode):
         response = response.encode("utf-8", 'replace')
@@ -450,8 +486,9 @@ def _finish_request(req, start_response, http_status,
 
     headers = []
     headers.append(('Content-Type', content_type))
-    for k, v in extra_headers.items():
-        headers.append((k,v))
+    if extra_headers:
+        for k, v in extra_headers.items():
+            headers.append((k,v))
 
     start_response(
         str(http_status) + ' ' + responses[http_status], 
@@ -471,32 +508,6 @@ def _log_access(req, status_code):
     request_time = 1000.0 * req.request_time()
     _root_log.info("%d %s %s (%s) %.2fms", status_code, req.method, req.uri,
         req.remote_ip, request_time)
-
-def _error_response(req, start_response, status_code, msg, **kwargs):
-    """
-        Unlike the tornado version, this error response starts the actual
-        response back to the client.
-    """
-    resp_dict = dict(kwargs)
-    resp_dict['code'] = status_code
-    resp_dict['message'] = msg
-
-    body = nudge.json.json_encode(resp_dict)
-
-    _log.error(
-        'Service Publisher error response: %s, %s', 
-        status_code,
-        req.uri
-    )
-
-    headers = []
-    headers.append(('Content-Type', 'application/json; charset=UTF-8'))
-
-    start_response(
-        str(status_code) + ' ' + responses[status_code], 
-        headers
-    )
-    return body
 
 class HTTPException(Exception):
 
