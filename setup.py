@@ -24,11 +24,12 @@ from setuptools import setup
 
 setup(
     name='nudge',
-    version='0.5',
+    version='0.5.1-snapshot',
     packages=[
         'nudge',
     ],
     namespace_packages = ['nudge'],
+    install_requires=['simplejson>=2.1.3'],
     
     zip_safe=False,
 
