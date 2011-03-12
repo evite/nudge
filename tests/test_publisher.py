@@ -167,7 +167,7 @@ class HandlerTest(unittest.TestCase):
         resp = MockResponse(req, 200)
         result = sp(req, resp.start_response)
         resp.write(result)
-        self.assertEqual(req._buffer,response_buf(404, '{"message": null, "code": 404}'))
+        self.assertEqual(req._buffer,response_buf(404, '{"message": "Not Found", "code": 404}'))
 
 
     def test_noargs_handlerfail(self):
@@ -179,7 +179,7 @@ class HandlerTest(unittest.TestCase):
         resp = MockResponse(req, 200)
         result = sp(req, resp.start_response)
         resp.write(result)
-        self.assertEqual(req._buffer,response_buf(500, '{"exception_class": "<type \'exceptions.Exception\'>", "message": "Unhandled Exception", "code": 500}'))
+        self.assertEqual(req._buffer,response_buf(500, '{"message": "Unhandled Exception", "code": 500}'))
 
 
     def test_matchfailure(self):
@@ -191,7 +191,7 @@ class HandlerTest(unittest.TestCase):
         resp = MockResponse(req, 200)
         result = sp(req, resp.start_response)
         resp.write(result)
-        self.assertEqual(req._buffer,response_buf(404, '{"message": null, "code": 404}'))
+        self.assertEqual(req._buffer,response_buf(404, '{"message": "Not Found", "code": 404}'))
 
     def test_noargs_but_method_handlersuccess(self):
         def handler(): return dict(arg1=1)

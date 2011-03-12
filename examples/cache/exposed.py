@@ -24,6 +24,11 @@ mc = memcache.Client(['127.0.0.1:11211'], debug=0)
 def index():
     return open("examples/cache/index.html").read()
 
+def static(filename):
+    for char in filename:
+        assert char not in ['/','\\']
+    return open("examples/cache/static/" + filename).read()
+
 service_description = [
     Endpoint(
         'index',
@@ -31,6 +36,16 @@ service_description = [
         '/$',
         index,
         renderer=nudge.renderer.HTML,
+    ),
+    Endpoint(
+        'static',
+        'GET',
+        '/static/(?P<filename>.*)$',
+        static,
+        args=Args(
+            nudge.arg.String('filename'),
+        ),
+        renderer=nudge.renderer.Identity('text/javascript'),
     ),
     Endpoint(
         'get',

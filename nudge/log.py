@@ -28,6 +28,7 @@ except:
 __all__ = [
     'try_color_logging',
     '_LogFormatter',
+    'LoggingMiddleware'
 ]
 
 """ Custom color logging setup for development purposes.
@@ -46,6 +47,35 @@ __all__ = [
     You would call such a function without importing nudge.log before
     your application runs.
 """
+
+class LoggingMiddleware(object):
+
+    def __init__(self, app, logger=logging):
+        self.app = app
+        self.logger = logger
+
+    def __call__(self, environ, start_response):
+        t1 = time.time()
+        req_time = 1000.0 * (time.time() - t1)
+        extra = {}
+        def wrap_start(status, resp):
+            extra['status'] = status
+            return start_response(status, resp)
+
+        resp = self.app(environ, wrap_start)
+        code = extra['status'].split()[0]
+        self.logger.error(
+            "%s %s %s/%s/%s (%s) %.2fms",
+            code,
+            environ['REQUEST_METHOD'],
+            environ['wsgi.url_scheme'], 
+            environ['HTTP_HOST'], 
+            environ['PATH_INFO'],
+            environ['REMOTE_ADDR'],
+            req_time,
+        )
+        return resp
+
 
 def try_color_logging():
     """ If curses is available, and this process is running in a tty,
@@ -78,6 +108,7 @@ class _LogFormatter(logging.Formatter):
                 logging.ERROR: curses.tparm(fg_color, 1), # Red
             }
             self._normal = curses.tigetstr("sgr0")
+
     def format(self, record):
         try:
             record.message = record.getMessage()
@@ -98,5 +129,5 @@ class _LogFormatter(logging.Formatter):
             formatted = formatted.rstrip() + "\n" + record.exc_text
         return formatted.replace("\n", "\n    ")
 
-try_color_logging()
+#try_color_logging()
 

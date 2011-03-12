@@ -65,31 +65,26 @@ class UserTwitterClient(nudge.arg.CustomArg):
     
     def __init__(self):
         def func(req, inargs):
-            cookies = req.headers.get('cookie')
-            if not cookies:
+            try:
+                cookies = req.headers.get('cookie')
+                assert cookies
+                c = Cookie.SimpleCookie()
+                c.load(cookies)
+                assert 'token' in c
+                token = c['token']
+                assert token
+                request_token = json.loads(DecodeAES(cipher, token.value))
+                return app_client.create_user_client(request_token)
+            except (Exception), e:
+                logging.exception('What?')
                 raise TwitterAuthException()
-            import Cookie
-            c = Cookie.SimpleCookie()
-            c.load(cookies)
-            token = c['token']
-            if not token:
-                raise TwitterAuthException()
-            request_token = json.loads(DecodeAES(cipher, token.value))
-            return app_client.create_user_client(request_token)
         self.argspec = func
 
-class TwitterExceptionHandler(Identity, Redirect, ExceptionRenderer):
-
-    def __init__(self):
-        Identity.__init__(self, 'text/html')
-        Redirect.__init__(self)
-        ExceptionRenderer.__init__(self)
-
-    def handle_exception(self, e):
-        headers = {
-            'Set-Cookie':'token=',
-        }
-        return self.redirect(app_client.authorization_url(), headers=headers)
+def handle_exception(e):
+    headers = {
+        'Set-Cookie':'token=',
+    }
+    return nudge.redirect(app_client.authorization_url(), headers)
 
 
 class CallbackRedirect(Redirect):
@@ -157,7 +152,10 @@ service_description = [
             UserTwitterClient(),
             nudge.arg.String('type', optional=True),
         ),
-        renderer=TwitterExceptionHandler(),
+        renderer=Identity('text/html'),
+        exceptions={
+            TwitterAuthException: handle_exception,
+        },
     ),
     Endpoint(
         'logout',

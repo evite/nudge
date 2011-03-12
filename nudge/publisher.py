@@ -27,13 +27,13 @@ import urllib
 import warnings
 
 import nudge.json
+import nudge.log
 import nudge.arg as args
 from nudge.validator import ValidationError
 from nudge.renderer import ExceptionRenderer
 from nudge.json import Dictomatic
 
 _log = logging.getLogger("nudge.servicepublisher")
-_root_log = logging.getLogger("nudge")
 
 __all__ = [
     'responses',
@@ -178,7 +178,7 @@ class WSGIRequest(object):
 
     @lazyprop
     def uri(self):
-        return '%s/%s/%s' % (
+        return '%s://%s%s' % (
                 self.req['wsgi.url_scheme'], 
                 self.req['HTTP_HOST'], 
                 self.req['PATH_INFO']
@@ -262,6 +262,26 @@ def _error_response(req, start_response, status_code, msg, **kwargs):
     )
     return body
 
+def redirect(uri, headers=None):
+    if not headers:
+        headers = {}
+    headers['Location'] = uri
+    return (302,
+        'text/html; charset=utf-8',
+        """
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<HTML>
+<HEAD>
+<TITLE>Moved</TITLE>
+</HEAD>
+<BODY>
+<H2>Moved</H2>
+<A HREF="%s">The requested URL has moved here.</A>
+</BODY>
+</HTML>""" % uri,
+        headers
+    )
+
 
 class JsonError(object):
     code = 500
@@ -273,11 +293,14 @@ class JsonError(object):
         message = exp.message
         if isinstance(exp, HTTPException):
             code = exp.status_code
-            message = responses[code]
-        if isinstance(exp, AssertionError):
+            if not message:
+                message = responses[code]
+        elif isinstance(exp, AssertionError):
             code = 400
+            message = exp.message
             _log.debug("Assertion error: %s", exp.message)
         else:
+            message = 'Unhandled Exception'
             _log.exception("Exception handled by JsonError")
         content = {'message': message, 'code':code}
         return code, self.content_type, \
@@ -290,7 +313,6 @@ class ServicePublisher(object):
         self._debug = debug
         if self._debug:
             _log.setLevel(logging.DEBUG)
-            _root_log.setLevel(logging.DEBUG)
         self._endpoints = []
         if endpoints:
             assert isinstance(endpoints, list), "endpoints must be a list"
@@ -432,7 +454,7 @@ class ServicePublisher(object):
         except (Exception), e:
             # Initialize error response tuple
             error_response = None
-            if endpoint.exceptions:
+            if endpoint and endpoint.exceptions:
                 try:
                     error_response = handle_exception(e, endpoint.exceptions)
                 except (Exception), e:
@@ -457,7 +479,6 @@ class ServicePublisher(object):
             extra_headers
         )
 
-        _log_access(req, http_status)
         return [final_content + "\r\n"]
 
 def handle_exception(exp, exp_handlers):
@@ -503,11 +524,6 @@ def _gen_trace_str(f, args, kwargs, res):
         return u"%s(%s%s): %s" % (f.__name__, argsstr, kwargsstr, res)
     else:
         return "%s(%s%s): %s" % (f.__name__, argsstr, kwargsstr, res)
-
-def _log_access(req, status_code):
-    request_time = 1000.0 * req.request_time()
-    _root_log.info("%d %s %s (%s) %.2fms", status_code, req.method, req.uri,
-        req.remote_ip, request_time)
 
 class HTTPException(Exception):
 
@@ -562,12 +578,13 @@ def serve(service_description, args=None):
     (options, args) = parser.parse_args(args)
 
     if options.debug:
-        import nudge.log
+        nudge.log.try_color_logging()
 
     sp = ServicePublisher(
         endpoints=service_description,
         debug=options.debug
     )
+    sp = nudge.log.LoggingMiddleware(sp)
 
     port = int(options.port)
     if str(options.server).strip().lower() == 'paste':
