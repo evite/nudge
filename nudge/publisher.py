@@ -286,22 +286,21 @@ class ServicePublisher(object):
             assert isinstance(endpoints, list), "endpoints must be a list"
             for ep in endpoints:
                 self.add_endpoint(ep)
+        # TODO Fix fallback app here and below
         self._fallbackapp = fallbackapp
 
-        # TODO make some real defaults
         self._options = Dictomatic({
             "default_error_handler": JsonErrorHandler(),
         })
-        # error_response = self.options.default_error_response
 
         if options:
-            assert isinstance(options, dict)
-            # TODO check each key to make sure we support it
-            self._options = Dictomatic.wrap(options)
+            assert isinstance(options, dict), "options must be of type dict"
+            self._options.update(options)
         self.verify_options()
             
     def verify_options(self):
         msg = "Default exception handler "
+        assert self._options.default_error_handler, msg + "must exist"
         assert isinstance(self._options.default_error_handler.code, int),\
             msg + "http code must be an int"
         assert self._options.default_error_handler.code in responses,\
@@ -320,6 +319,8 @@ class ServicePublisher(object):
             assert isinstance(v, str),\
                 msg + "headers keys and values must be a byte string"
 
+        # Set default error params here incase of massive failure we fallback
+        # to these.
         self._options.default_error_response = (
             self._options.default_error_handler.code,
             self._options.default_error_handler.content_type,
@@ -422,11 +423,20 @@ class ServicePublisher(object):
 
         except (Exception), e:
             error_response = None
+            #
+            # Try to use this endpoint's exception handler(s)
+            # If the raised exception is not mapped in this endpoint, or
+            # this endpoint raises an exception when trying to handle, 
+            # we will then try to the default handler, and ultimately
+            # fallback to the self._options.default_error_response, which
+            # is guaranteed to be valid at app initialization.
+            #
             if endpoint and endpoint.exceptions:
                 try:
                     error_response = handle_exception(e, endpoint.exceptions)
                 except (Exception), e:
-                    _log.warn("Endpoint failed to handle exception", e)
+                    # TODO this may log too loudly
+                    _log.exception("Endpoint failed to handle exception")
 
             if not error_response:
                 try:
@@ -437,7 +447,7 @@ class ServicePublisher(object):
                         "Default error handler failed to handle exception")
 
             code, content_type, content, extra_headers = \
-                    error_response or self._options.default_error_response
+                error_response or self._options.default_error_response
 
         final_content = _finish_request(
             req, 
@@ -460,7 +470,8 @@ def handle_exception(exp, exp_handlers):
             return exp_handler(exp)
         else:
             # Handle 'simple' tuple based exception handler (not callable)
-            return exp_handler
+            return (exp_handler.code, exp_handler.content_type,
+                    exp_handler.content, exp_handler.headers)
     _log.exception("Unhandled exception class: %s", exp.__class__)
     raise exp
 

@@ -151,9 +151,8 @@ class ExceptionTest(unittest.TestCase):
             503, '{"message": "%s", "code": 503}' % \
             (responses[503])))
 
-    def test_custom_exp_handler(self):
-        """ Test default exception handler without a callable.
-            This will default to """
+    def test_default_exp_handler(self):
+        """ Test default exception handler without a callable. """
         class TestExpHandler(object):
             code = 500
             content_type = "text/plain"
@@ -161,7 +160,7 @@ class ExceptionTest(unittest.TestCase):
             headers = {}
 
         def handler():
-            raise Exception(503)
+            raise Exception(500)
         
         sp = ServicePublisher(
                 options={"default_error_handler": TestExpHandler()})
@@ -172,13 +171,145 @@ class ExceptionTest(unittest.TestCase):
             function=handler,
         ))
         req = create_req('GET', '/location')
-        resp = MockResponse(req, 503)
+        resp = MockResponse(req, 500)
         result = sp(req, resp.start_response)
         resp.write(result)
         self.assertEqual(req._buffer, response_buf(
-            http_status=503,
+            http_status=500,
             content="An error occured",
             content_type="text/plain",
+        ))
+
+    def test_default_exp_handler_with_call(self):
+        """ Test default exception handler with a callable that will change
+            message. """
+        class TestExpHandler(object):
+            code = 500
+            content_type = "text/plain"
+            content = "An error occured"
+            headers = {}
+            def __call__(self, exp):
+                return (self.code, self.content_type, exp.message, self.headers)
+
+        def handler():
+            raise Exception("New Message")
+        
+        sp = ServicePublisher(
+                options={"default_error_handler": TestExpHandler()})
+        sp.add_endpoint(Endpoint(
+            name='test', 
+            method='GET', 
+            uri='/location', 
+            function=handler,
+        ))
+        req = create_req('GET', '/location')
+        resp = MockResponse(req, 500)
+        result = sp(req, resp.start_response)
+        resp.write(result)
+        self.assertEqual(req._buffer, response_buf(
+            http_status=500,
+            content="New Message",
+            content_type="text/plain",
+        ))
+
+    def test_custom_exp_handler(self):
+        """ Test a custom exception handler without a callable. Map to our
+            endpoint, and do not use a default handler (will default to
+            JsonErrorHandler) """
+        class TestExpHandler(object):
+            code = 500
+            content_type = "text/plain"
+            content = "Default error message"
+            headers = {}
+
+        def handler():
+            raise Exception("New Message")
+        
+        sp = ServicePublisher()
+        sp.add_endpoint(Endpoint(
+            name='test', 
+            method='GET', 
+            uri='/location', 
+            function=handler,
+            exceptions={Exception:TestExpHandler()}
+        ))
+        req = create_req('GET', '/location')
+        resp = MockResponse(req, 500)
+        result = sp(req, resp.start_response)
+        resp.write(result)
+        self.assertEqual(req._buffer, response_buf(
+            http_status=500,
+            content="Default error message",
+            content_type="text/plain",
+        ))
+
+    def test_custom_exp_handler_with_callable(self):
+        """ Test a custom exception handler with a callable that will return
+            the exception message instead of default. Map to our
+            endpoint, and do not use a default handler (will default to
+            JsonErrorHandler) """
+        class TestExpHandler(object):
+            code = 500
+            content_type = "text/plain"
+            content = "Default error message"
+            headers = {}
+            def __call__(self, exp):
+                return (self.code, self.content_type, exp.message, self.headers)
+
+
+        def handler():
+            raise Exception("New Message")
+        
+        sp = ServicePublisher()
+        sp.add_endpoint(Endpoint(
+            name='test', 
+            method='GET', 
+            uri='/location', 
+            function=handler,
+            exceptions={Exception:TestExpHandler()}
+        ))
+        req = create_req('GET', '/location')
+        resp = MockResponse(req, 500)
+        result = sp(req, resp.start_response)
+        resp.write(result)
+        self.assertEqual(req._buffer, response_buf(
+            http_status=500,
+            content="New Message",
+            content_type="text/plain",
+        ))
+
+    def test_custom_exp_handler_with_callable_fail(self):
+        """ Test a custom exception handler with a callable that will raise
+            an exception and force SP to use the default exception handling. Map to our
+            endpoint, and do not use a default handler (will default to
+            JsonErrorHandler) """
+        class TestExpHandler(object):
+            code = 500
+            content_type = "text/plain"
+            content = "Default error message"
+            headers = {}
+            def __call__(self, exp):
+                """ Note that doing this now hides the original exception """
+                raise Exception("Something really bad happened")
+
+        def handler():
+            raise Exception("New Message")
+        
+        sp = ServicePublisher(debug=True, endpoints=[
+            Endpoint(
+            name='test', 
+            method='GET', 
+            uri='/location', 
+            function=handler,
+            exceptions={Exception:TestExpHandler()}
+        )])
+        req = create_req('GET', '/location')
+        resp = MockResponse(req, 500)
+        result = sp(req, resp.start_response)
+        resp.write(result)
+        self.assertEqual(req._buffer, response_buf(
+            http_status=500,
+            content='{"message": "%s", "code": 500}' % (responses[500]),
         ))
 
 if __name__ == '__main__':
