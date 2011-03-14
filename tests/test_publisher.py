@@ -36,7 +36,9 @@ from nose.tools import raises
 
 
 class MockResponse(object):
-    def __init__(self, request, code, headers={}, buffer=None, effective_url='http://test.example.com', error=None, request_time=None, time_info={}):
+    def __init__(self, request, code, headers={}, buffer=None, 
+            effective_url='http://test.example.com', error=None, 
+            request_time=None, time_info={}):
         self.request = request
         self.code = code
         self.headers = headers
@@ -168,19 +170,6 @@ class HandlerTest(unittest.TestCase):
         result = sp(req, resp.start_response)
         resp.write(result)
         self.assertEqual(req._buffer,response_buf(404, '{"message": "Not Found", "code": 404}'))
-
-
-    def test_noargs_handlerfail(self):
-        def handler(): raise Exception("")
-
-        sp = ServicePublisher()
-        sp.add_endpoint(Endpoint(name='', method='GET', uri='/location', function=handler))
-        req = create_req('GET', '/location')
-        resp = MockResponse(req, 200)
-        result = sp(req, resp.start_response)
-        resp.write(result)
-        self.assertEqual(req._buffer,response_buf(500, '{"message": "Unhandled Exception", "code": 500}'))
-
 
     def test_matchfailure(self):
         def handler(): pass

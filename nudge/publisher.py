@@ -24,7 +24,6 @@ import types
 import time
 import types
 import urllib
-import warnings
 
 import nudge.json
 import nudge.log
@@ -93,6 +92,13 @@ responses = {
   505: 'HTTP Version Not Supported',
 }
 
+DEFAULT_ERROR_CODE = 500
+DEFAULT_ERROR_CONTENT_TYPE = "application/json; charset=UTF-8"
+DEFAULT_ERROR_CONTENT = '{"message": "%s", "code": %i}' % (
+    responses[DEFAULT_ERROR_CODE],
+    DEFAULT_ERROR_CODE,
+)
+   
 def lazyprop(fn):
     attr_name = '_lazy_' + fn.__name__
     @property
@@ -101,7 +107,6 @@ def lazyprop(fn):
             setattr(self, attr_name, fn(self))
         return getattr(self, attr_name)
     return _lazyprop
-
 
 def Args(*args, **kwargs):
     return list(args) or [], kwargs or {}
@@ -119,26 +124,9 @@ class Endpoint(object):
         assert callable(function), "function must be callable, but was %s" %\
             type(function)
 
-        #
-        # EXPFIXME
-        #
         assert not exceptions or isinstance(exceptions, dict), \
             "exceptions must be a dict, but was type %s" % type(exceptions)
-        if exceptions:
-            for exception, error_code in exceptions.items():
-                # Make sure it is a real Exception
-                if not issubclass(exception, Exception):
-                    raise TypeError(
-                        "Endpoint exceptions must be subclasses of Exception "
-                    )
-                # Make sure the error_codes are valid. This may be too tightly
-                # restricted.
-                # if not isinstance(error_code, int) or \
-                        # error_code not in responses:
-                    # raise TypeError(
-                        # "Invalid endpoint exception error code %s" \
-                            # % (error_code)
-                    # )
+        # TODO maybe do some more checking on exceptions
 
         self.name = name
         self.method = method
@@ -236,32 +224,6 @@ class WSGIRequest(object):
     def request_time(self):
         return time.time() - self.start_time
 
-def _error_response(req, start_response, status_code, msg, **kwargs):
-    """
-        Unlike the tornado version, this error response starts the actual
-        response back to the client.
-    """
-    resp_dict = dict(kwargs)
-    resp_dict['code'] = status_code
-    resp_dict['message'] = msg
-
-    body = nudge.json.json_encode(resp_dict)
-
-    _log.error(
-        'Service Publisher error response: %s, %s', 
-        status_code,
-        req.uri
-    )
-
-    headers = []
-    headers.append(('Content-Type', 'application/json; charset=UTF-8'))
-
-    start_response(
-        str(status_code) + ' ' + responses[status_code], 
-        headers
-    )
-    return body
-
 def redirect(uri, headers=None):
     if not headers:
         headers = {}
@@ -282,11 +244,16 @@ def redirect(uri, headers=None):
         headers
     )
 
-
-class JsonError(object):
-    code = 500
-    content_type = "application/json; charset=UTF-8"
-    content = '{"message":"Unhandled exception", "code":500}'
+class JsonErrorHandler(object):
+    """ Default nudge error handler.
+        If Nudge catches an HTTPException, we will try to set the code 
+        from that exception. AssertionErrors are considered normal
+        bad request errors, and 400 is returned. Otherwise this returns
+        500 with {code:500 , message:message} where message is the exception
+        message. """
+    code = DEFAULT_ERROR_CODE
+    content_type = DEFAULT_ERROR_CONTENT_TYPE
+    content = DEFAULT_ERROR_CONTENT
     headers = {}
     def __call__(self, exp):
         code = self.code
@@ -300,8 +267,9 @@ class JsonError(object):
             message = exp.message
             _log.debug("Assertion error: %s", exp.message)
         else:
-            message = 'Unhandled Exception'
-            _log.exception("Exception handled by JsonError")
+            message = responses[DEFAULT_ERROR_CODE]
+            _log.exception("Exception handled by JsonErrorHandler")
+        # TODO (maybe) add the rest of the exceptions members to the resp
         content = {'message': message, 'code':code}
         return code, self.content_type, \
             nudge.json.json_encode(content), self.headers
@@ -322,33 +290,35 @@ class ServicePublisher(object):
 
         # TODO make some real defaults
         self._options = Dictomatic({
-            "default_error_handler": JsonError(),
+            "default_error_handler": JsonErrorHandler(),
         })
         # error_response = self.options.default_error_response
 
         if options:
             assert isinstance(options, dict)
             # TODO check each key to make sure we support it
-            self._options = options
+            self._options = Dictomatic.wrap(options)
         self.verify_options()
             
     def verify_options(self):
+        msg = "Default exception handler "
         assert isinstance(self._options.default_error_handler.code, int),\
-            "Default error handler http code must be an int"
+            msg + "http code must be an int"
         assert self._options.default_error_handler.code in responses,\
-            "Default error handler http code invalid"
-        assert isinstance(self._options.default_error_handler.content_type, str),\
-            "Default error handler content_type must be a byte string"
+            msg + "http code not in nudge.publisher.responses"
+        assert isinstance(
+            self._options.default_error_handler.content_type, str),\
+            msg + "content_type must be a byte string"
         assert isinstance(self._options.default_error_handler.content, str),\
-            "Default error handler content must be a byte string"
+            msg + "content must be a byte string"
         assert isinstance(self._options.default_error_handler.headers, dict),\
-            "Default error handler headers must be a dict"
+            msg + "headers must be a dict"
 
         for k, v in self._options.default_error_handler.headers:
             assert isinstance(k, str),\
-                "Default error handler headers keys and values must be a byte string"
+                msg+ "headers keys and values must be a byte string"
             assert isinstance(v, str),\
-                "Default error handler headers keys and values must be a byte string"
+                msg + "headers keys and values must be a byte string"
 
         self._options.default_error_response = (
             self._options.default_error_handler.code,
@@ -378,7 +348,7 @@ class ServicePublisher(object):
         # defer any mutation of the request object (incl. writes to the client)
         # until you're sure all exception prone activities have been performed
         # successfully (aka: "basic exception guarantee")
-        http_status = None
+        code = None
         final_content = ""
         endpoint = None
         try:
@@ -441,18 +411,16 @@ class ServicePublisher(object):
                     # type and not an instance - todo: Cache renderer
                     endpoint.renderer = endpoint.renderer()
                 r = endpoint.renderer(result)
-                response, content_type, http_status, extra_headers = \
+                content, content_type, code, extra_headers = \
                     r.content, r.content_type, r.http_status, r.headers
             else:
                 # Nudge gives back json by default
-                http_status = 200
-                content_type = 'application/json; charset=UTF-8'
-                response = nudge.json.json_encode(result)
+                code = 200
+                content_type = DEFAULT_ERROR_CONTENT_TYPE
+                content = nudge.json.json_encode(result)
                 extra_headers = {}
 
-           
         except (Exception), e:
-            # Initialize error response tuple
             error_response = None
             if endpoint and endpoint.exceptions:
                 try:
@@ -465,17 +433,18 @@ class ServicePublisher(object):
                     # Try one more time to handle a base exception
                     error_response = self._options.default_error_handler(e)
                 except (Exception), e:
-                    _log.exception("Default error handler failed to handle exception")
+                    _log.exception(
+                        "Default error handler failed to handle exception")
 
-            http_status, content_type, response, extra_headers = error_response \
-                    or self._options.default_error_response
+            code, content_type, content, extra_headers = \
+                    error_response or self._options.default_error_response
 
         final_content = _finish_request(
             req, 
             start_response, 
-            http_status, 
-            response, 
+            code, 
             content_type, 
+            content, 
             extra_headers
         )
 
@@ -495,27 +464,32 @@ def handle_exception(exp, exp_handlers):
     _log.exception("Unhandled exception class: %s", exp.__class__)
     raise exp
 
-def _finish_request(req, start_response, http_status, 
-                    response, content_type, extra_headers):
-    # TODO: this probably shouldnt be called in more than one place
-    # Check http_status, content_type, and extra_headers for validity
-    # Our response must be a byte string
-    if isinstance(response, unicode):
-        response = response.encode("utf-8", 'replace')
+def _finish_request(req, start_response, code, content_type, content, headers):
+    try:
+        if isinstance(content, unicode):
+            content = content.encode("utf-8", 'replace')
+        assert isinstance(content, str), "Content was not a byte string"
+        assert isinstance(content_type, str), \
+            "Content Type was not a byte string"
+        final_headers = []
+        final_headers.append(('Content-Type', content_type))
+        if headers:
+            for k, v in headers.items():
+                assert isinstance(k, str), \
+                    "Headers keys and values must be a byte string"
+                final_headers.append((k,v))
 
-    assert isinstance(response, str), "Response was not a byte string"
-
-    headers = []
-    headers.append(('Content-Type', content_type))
-    if extra_headers:
-        for k, v in extra_headers.items():
-            headers.append((k,v))
+    except (Exception), e:
+        _log.exception(e)
+        final_headers = [('Content-Type', DEFAULT_ERROR_CONTENT_TYPE)]
+        content = DEFAULT_ERROR_CONTENT
+        code = DEFAULT_ERROR_CODE
 
     start_response(
-        str(http_status) + ' ' + responses[http_status], 
-        headers
+        str(code) + ' ' + responses[code], 
+        final_headers
     )
-    return response
+    return content
 
 def _gen_trace_str(f, args, kwargs, res):
     argsstr = ''.join(map(lambda v: "%s, " % v, args))
