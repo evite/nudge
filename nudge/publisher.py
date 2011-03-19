@@ -402,9 +402,6 @@ class ServicePublisher(object):
 
             # TODO make sure this works with unicode
             _log.debug(_gen_trace_str(endpoint.function, args, kwargs, result))
-
-            if result == None:
-                raise HTTPException(404)
             
             if endpoint.renderer:
                 if isinstance(endpoint.renderer, types.TypeType):
@@ -414,6 +411,8 @@ class ServicePublisher(object):
                 r = endpoint.renderer(result)
                 content, content_type, code, extra_headers = \
                     r.content, r.content_type, r.http_status, r.headers
+            elif result == None:
+                raise HTTPException(404)
             else:
                 # Nudge gives back json by default
                 code = 200
