@@ -1,6 +1,5 @@
 
 General Todo:
-* ENDPOINTS -> should only be one set. (nuke the tornado ones)
 * Support File objects (test currently disabled)
 * Allow more control on content type. For example, I may want to insist
   that a post request comes in as json, or that the default output is something
@@ -9,15 +8,14 @@ General Todo:
   missing a particular variable. Would be more helpful to tell me i need json,
   or assume it is and try to decode.
   Perhaps we can allow a list of possible incoming content types per EP.
-
-
+* 
 
 (Tests):
 * More of all tests
 * Renderer tests
 * Validator tests
 * Generator tests
-* Tests for every possible exception flow in publisher
+* (this should be complete)Tests for every possible exception flow in publisher
 * Unicode unicode unicode... in every input and output
 * Running with Tornado
 * Fallback app tests.
@@ -28,6 +26,11 @@ Service Publisher:
   and we really need to support normal tornado requests. I think we already do,
   but we should test this.
 * Look into the possibility of the fallback app: 
+
+Renderers:
+* Possible bug: if our endpoint function returns a list like
+  return thing1, thing2
+  im not sure this would be properly passed to the renderer
 
 Endpoints:
 * (This is currently done, but might be too strict)

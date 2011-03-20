@@ -90,6 +90,7 @@ class CustomArg(Arg):
         pass
 
 class String(Arg): 
+    """ Standard unicode string. No size restrictions """
 
     def __init__(self, name, optional=False):
         validator = validate.NotEmpty()

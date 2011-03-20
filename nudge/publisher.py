@@ -24,81 +24,26 @@ import types
 import time
 import types
 import urllib
+import warnings
 
 import nudge.json
 import nudge.log
 import nudge.arg as args
+from nudge.renderer import Json
 from nudge.validator import ValidationError
-from nudge.renderer import ExceptionRenderer
 from nudge.json import Dictomatic
+from nudge.error import handle_exception, HTTPException, JsonErrorHandler,\
+    DEFAULT_ERROR_CODE, DEFAULT_ERROR_CONTENT_TYPE, DEFAULT_ERROR_CONTENT, responses
 
-_log = logging.getLogger("nudge.servicepublisher")
+_log = logging.getLogger("nudge.publisher")
 
 __all__ = [
-    'responses',
     'Args',
     'Endpoint',
     'WSGIRequest',
     'ServicePublisher',
-    'HTTPException',
 ]
 
-responses = {
-  100: 'Continue',
-  101: 'Switching Protocols',
-
-  200: 'OK',
-  201: 'Created',
-  202: 'Accepted',
-  203: 'Non-Authoritative Information',
-  204: 'No Content',
-  205: 'Reset Content',
-  206: 'Partial Content',
-
-  300: 'Multiple Choices',
-  301: 'Moved Permanently',
-  302: 'Found',
-  303: 'See Other',
-  304: 'Not Modified',
-  305: 'Use Proxy',
-  306: '(Unused)',
-  307: 'Temporary Redirect',
-
-  400: 'Bad Request',
-  401: 'Unauthorized',
-  402: 'Payment Required',
-  403: 'Forbidden',
-  404: 'Not Found',
-  405: 'Method Not Allowed',
-  406: 'Not Acceptable',
-  407: 'Proxy Authentication Required',
-  408: 'Request Timeout',
-  409: 'Conflict',
-  410: 'Gone',
-  411: 'Length Required',
-  412: 'Precondition Failed',
-  413: 'Request Entity Too Large',
-  414: 'Request-URI Too Long',
-  415: 'Unsupported Media Type',
-  416: 'Requested Range Not Satisfiable',
-  417: 'Expectation Failed',
-  418: 'I\'m a teapot',
-
-  500: 'Internal Server Error',
-  501: 'Not Implemented',
-  502: 'Bad Gateway',
-  503: 'Service Unavailable',
-  504: 'Gateway Timeout',
-  505: 'HTTP Version Not Supported',
-}
-
-DEFAULT_ERROR_CODE = 500
-DEFAULT_ERROR_CONTENT_TYPE = "application/json; charset=UTF-8"
-DEFAULT_ERROR_CONTENT = '{"message": "%s", "code": %i}' % (
-    responses[DEFAULT_ERROR_CODE],
-    DEFAULT_ERROR_CODE,
-)
-   
 def lazyprop(fn):
     attr_name = '_lazy_' + fn.__name__
     @property
@@ -141,7 +86,19 @@ class Endpoint(object):
                 "named must be a dict, but was type %s" % type(self.named)
 
         self.exceptions = exceptions
-        self.renderer = renderer
+        if renderer:
+            if isinstance(renderer, types.TypeType):
+                # support cases where the renderer was specified by the
+                # type and not an instance - todo: Cache renderer
+                self.renderer = renderer()
+                warnings.warn(
+                    "Endpoint %s was passed an uninstantiated renderer" %\
+                    (name))
+            else:
+                self.renderer = renderer
+        else:
+            # Nudge default renderer
+            self.renderer = Json()
         self.regex = re.compile(self.method + self.uri)
 
     def __call__(self, *args, **kwargs):
@@ -243,36 +200,6 @@ def redirect(uri, headers=None):
 </HTML>""" % uri,
         headers
     )
-
-class JsonErrorHandler(object):
-    """ Default nudge error handler.
-        If Nudge catches an HTTPException, we will try to set the code 
-        from that exception. AssertionErrors are considered normal
-        bad request errors, and 400 is returned. Otherwise this returns
-        500 with {code:500 , message:message} where message is the exception
-        message. """
-    code = DEFAULT_ERROR_CODE
-    content_type = DEFAULT_ERROR_CONTENT_TYPE
-    content = DEFAULT_ERROR_CONTENT
-    headers = {}
-    def __call__(self, exp):
-        code = self.code
-        message = exp.message
-        if isinstance(exp, HTTPException):
-            code = exp.status_code
-            if not message:
-                message = responses[code]
-        elif isinstance(exp, AssertionError):
-            code = 400
-            message = exp.message
-            _log.debug("Assertion error: %s", exp.message)
-        else:
-            message = responses[DEFAULT_ERROR_CODE]
-            _log.exception("Exception handled by JsonErrorHandler")
-        # TODO (maybe) add the rest of the exceptions members to the resp
-        content = {'message': message, 'code':code}
-        return code, self.content_type, \
-            nudge.json.json_encode(content), self.headers
 
 class ServicePublisher(object):
 
@@ -403,22 +330,9 @@ class ServicePublisher(object):
             # TODO make sure this works with unicode
             _log.debug(_gen_trace_str(endpoint.function, args, kwargs, result))
             
-            if endpoint.renderer:
-                if isinstance(endpoint.renderer, types.TypeType):
-                    # support cases where the renderer was specified by the
-                    # type and not an instance - todo: Cache renderer
-                    endpoint.renderer = endpoint.renderer()
-                r = endpoint.renderer(result)
-                content, content_type, code, extra_headers = \
-                    r.content, r.content_type, r.http_status, r.headers
-            elif result == None:
-                raise HTTPException(404)
-            else:
-                # Nudge gives back json by default
-                code = 200
-                content_type = DEFAULT_ERROR_CONTENT_TYPE
-                content = nudge.json.json_encode(result)
-                extra_headers = {}
+            r = endpoint.renderer(result)
+            content, content_type, code, extra_headers = \
+                r.content, r.content_type, r.http_status, r.headers
 
         except (Exception), e:
             error_response = None
@@ -459,21 +373,6 @@ class ServicePublisher(object):
 
         return [final_content + "\r\n"]
 
-def handle_exception(exp, exp_handlers):
-    # Check if this endpoint can handle this exception
-    if exp_handlers and exp.__class__ in exp_handlers:
-        exp_handler = exp_handlers[exp.__class__]
-        if callable(exp_handler):
-            # TODO maybe give e the req and start response, maybe add
-            # a finished var to track if e handled everything
-            return exp_handler(exp)
-        else:
-            # Handle 'simple' tuple based exception handler (not callable)
-            return (exp_handler.code, exp_handler.content_type,
-                    exp_handler.content, exp_handler.headers)
-    _log.exception("Unhandled exception class: %s", exp.__class__)
-    raise exp
-
 def _finish_request(req, start_response, code, content_type, content, headers):
     try:
         if isinstance(content, unicode):
@@ -509,12 +408,6 @@ def _gen_trace_str(f, args, kwargs, res):
     else:
         return "%s(%s%s): %s" % (f.__name__, argsstr, kwargsstr, res)
 
-class HTTPException(Exception):
-
-    def __init__(self, status_code, message=None):
-        self.status_code = status_code
-        self.message = message
-
 def _generate_headers(version, status_code, content_length, headers={}):
     """generates status line + headers"""
     lines = [version + " " + str(status_code) + " " +
@@ -524,7 +417,6 @@ def _generate_headers(version, status_code, content_length, headers={}):
     lines.extend(["%s: %s" % (n, v) for n, v in headers.iteritems()])
 
     return "\r\n".join(lines) + "\r\n\r\n"
-
 
 def serve(service_description, args=None):
     if not args:

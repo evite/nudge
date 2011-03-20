@@ -19,6 +19,7 @@
 import base64
 from cStringIO import StringIO
 from nudge.json import json_encode
+from nudge.error import HTTPException
 
 __all__ = [
     'ExceptionRenderer',
@@ -35,18 +36,6 @@ __all__ = [
     'Identity',
 ]
 
-class ExceptionRenderer(Exception):
-    """ 
-        Base class for special handling of service errors.
-        Subclass me.
-        Your transformer needs to return a response object containing:
-        response.content,
-        response.content_type,
-        response.http_status,
-        response.header,
-    """
-    pass
-
 class Result(object):
     def __init__(self, content, content_type, http_status=200, headers=None):
         self.content = content
@@ -57,8 +46,12 @@ class Result(object):
         self.headers = headers
 
 class Json(object):
+    """ Default Nudge HTTP Content Type. Encodes the entire endpoint
+        result as json, and returns """
 
     def __call__(self, result):
+        if result == None:
+            raise HTTPException(404)
         return Result(
             content=json_encode(result),
             content_type='application/json; charset=UTF-8',
