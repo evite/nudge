@@ -20,7 +20,7 @@
 A simple hello world example that illustrates how easy it is to write
 a web application using Nudge.
 
-It is recommended to use a class for each logical section of your application.
+It is recommended to use a class or module for each logical section of your app.
 So if you were making Evite, you would probably have a separate class for
 Users, Events, Gallery, etc. These classes are usually implemented 
 independently of anything HTTP related (and in different files).
