@@ -29,11 +29,15 @@ import nudge.arg as args
 from nudge import Endpoint, Args
 from nudge.renderer import HTML, Result, Redirect
 from nudge.publisher import ServicePublisher
+from nudge.gen import Project, ProjectSection
+from nudge.generate.javascript import JSClient
+from nudge.generate.sphinx import SphinxDocs
 
 from google.appengine.api import users
 from google.appengine.ext import db
 from urllib import quote_plus
 import logging
+import sys
 
 log = logging.getLogger("cmstest")
 
@@ -354,6 +358,27 @@ service_description = [
 # wsgi application to be served by the python HTTP server of your choice
 #
 if __name__ == "__main__":
+    if len(sys.argv) == 2 and sys.argv[1] == "-gen":
+        # Prep all the app's sections
+        sections = [
+            ProjectSection(
+                name="Cms HTML Section",
+                identifier="cms_html_section",
+                description="Cms HTML example section",
+                endpoints=service_description,
+                options=None,
+            )
+        ]
+        # This will generate all docs/clients
+        project = Project(
+            name="Cms Example",
+            identifier="cms",
+            description="Cms Example description",
+            project_sections=sections,
+            destination_dir="/tmp/cms_gen/",
+            generators=[SphinxDocs(), JSClient()]
+        )
+        sys.exit(0)
 
     wsgi_application = ServicePublisher(
         endpoints=service_description,

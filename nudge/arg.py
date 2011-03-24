@@ -40,35 +40,44 @@ __all__ = [
 class Arg(object):
     
     def __init__(self, name, optional=False, default=None, validator=None):
+        # Are these class members unnecessary when using the below func?
         self.name = name
         self.optional = optional
         self.validator = validator
         self.default = default
         def func(req, inargs):
+            exists = False
+            data = None
+            msg = None
+            # We should move this check into the Endpoint constructor
             if not self.validator:
                 raise AttributeError(
                     "Arg has no validator for property: '%s'" % self.name
                 )
-
-            data = req.arguments.get(self.name) if req.arguments else None
-            if not data and inargs:
-                data = inargs.get(self.name)
-            if data == None:
-                if default:
-                    return default
+            if req.arguments and self.name in req.arguments:
+                exists = True
+                data = req.arguments[self.name]
+            elif inargs and self.name in inargs:
+                exists = True
+                data = inargs[self.name]
+            # Default assumes optional=True
+            if not data:
+                if self.default:
+                    return self.default
                 elif self.optional:
                     return None
+                elif exists:
+                    msg = " is required, exists, but is empty"
                 else:
-                    raise nudge.publisher.HTTPException(
-                        400, 
-                        "%s is required" % self.name
-                    )
-
+                    msg = " is required but does not exist"
+                raise nudge.publisher.HTTPException(
+                    400, 
+                    self.name + msg
+                )
             # Query string args will come in list format, take the first.
             # Unless of course we are expecting a list from the json body.
             if type(data) in [types.ListType] and not isinstance(self, List):
                 data = data[0]
-
             try:
                 return self.validator(data)
             except (validate.ValidationError), e:
@@ -92,7 +101,7 @@ class CustomArg(Arg):
 class String(Arg): 
     """ Standard unicode string. No size restrictions """
 
-    def __init__(self, name, optional=False):
+    def __init__(self, name, optional=False, max_len=None):
         validator = validate.NotEmpty()
         if optional:
             validator = validate.String()
