@@ -29,9 +29,9 @@ import nudge.arg as args
 from nudge import Endpoint, Args
 from nudge.renderer import HTML, Result, Redirect
 from nudge.publisher import ServicePublisher
-from nudge.gen import Project, ProjectSection
-from nudge.generate.javascript import JSClient
-from nudge.generate.sphinx import SphinxDocs
+from nudge.automagic.gen import Project, ProjectSection
+from nudge.automagic.generate.javascript import JSClient
+from nudge.automagic.generate.sphinx import SphinxDocs
 
 from google.appengine.api import users
 from google.appengine.ext import db
@@ -374,7 +374,7 @@ if __name__ == "__main__":
             name="Cms Example",
             identifier="cms",
             description="Cms Example description",
-            project_sections=sections,
+            sections=sections,
             destination_dir="/tmp/cms_gen/",
             generators=[SphinxDocs(), JSClient()]
         )

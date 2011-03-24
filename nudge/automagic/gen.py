@@ -36,7 +36,7 @@ class Project(object):
         that will be taken (and files written) to the dest dir.
         Like clients or spynix docs etc
         """
-    def __init__(self, name, identifier, description, project_sections, 
+    def __init__(self, name, identifier, description, sections, 
             destination_dir, generators):
         #
         self.name = name
@@ -44,11 +44,11 @@ class Project(object):
             identifier + " is not a valid identifier"
         self.identifier = identifier
         self.description = description
-        self.sections = project_sections
+        self.sections = sections
         self.destination = destination_dir
         assert isinstance(generators, list), "generators must be a list"
         self.generators = generators
-        [gen.generate() for gen in self.generators]
+        [gen.generate(self.sections) for gen in self.generators]
 
     def generate(self):
         """ Your subclasses should override this method """
