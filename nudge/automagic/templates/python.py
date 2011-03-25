@@ -21,15 +21,14 @@
   {{ project.description }}
 '''
 {% for section in project.sections %}
-/*
- * Section {{ section.name }} - {{ section.indentifier }}
- * {{ section.description }}
- */ 
+'''
+  Section {{ section.name }} - {{ section.indentifier }}
+  {{ section.description }}
+''' 
 
 {% for ep in section.endpoints %}
-def {{ ep.function_name }}({{ ep.args }}):{% for name in ep.asserts %}
-    assert {{ name }}, "{{ name }} must not be None."{% endfor %}
-    {% if not ep.asserts %}pass{% endif %}
+def {{ ep.function_name }}({{ ep.args }}):
+    pass
 
 {% endfor %}
 {% endfor %}

@@ -82,11 +82,6 @@ class PythonStubs(AutomagicGenerator):
                 return '='.join([str(arg.name), str(None)])
             return arg.name
 
-        def endpoint_data(name, args):
-            asserts = [name for name, arg in args.named.iteritems() if not arg.optional]
-            asserts.extend([name for name, arg in args.sequential_dict.iteritems() if not arg.optional])
-            return {'function_name':name, 'args':arg_string(args), 'asserts':list(set(asserts))}
-
         sections = []
         for section in project.sections:
             section_dict = {
@@ -97,13 +92,12 @@ class PythonStubs(AutomagicGenerator):
             }
             endpoints = {}
             for ep in section.endpoints:
-                current = endpoints.setdefault(ep.function_name, Dict({'sequential':[],'sequential_dict':{},'named':{}}))
+                current = endpoints.setdefault(ep.function_name, Dict({'sequential':[],'named':{}}))
                 # Preserve order...it's super important
                 if len(ep.sequential) > len(current.sequential):
                     current.sequential = ep.sequential
-                    current.sequential_dict = dict([(arg.name, arg) for arg in ep.sequential])
                 current.named.update(dict([(arg.name, arg) for arg in current.named]))
-            section_dict['endpoints'] = [endpoint_data(name, args) for name, args in endpoints.iteritems()]
+            section_dict['endpoints'] = [{'function_name':name, 'args':arg_string(args)} for name, args in endpoints.iteritems()]
             sections.append(section_dict)
 
         project.sections = sections
