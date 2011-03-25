@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python                                                                                                                                                              
 #
 # Copyright (C) 2011 Evite LLC
 
@@ -15,5 +15,34 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+__import__('pkg_resources').declare_namespace(__name__)
+
+import os
+from nudge.automagic.generate.templates import get_template
+
+class AutomagicGenerator(object):
+    extension = 'txt'
+    template = get_template('default.html')
+
+    def __init__(self, dir='.', module=None):
+        self.dir = dir
+        self.module = module
+
+    def ensure_output_file(self, overwrite=False):
+        filepath = os.path.join(self.dir,'%s.%s' % (self.module, self.extension))
+        if not os.path.exists(filepath):
+            return True
+        if overwrite:
+            os.remove(filepath)
+            return True
+        raise Exception("This module already exists.  Please remove it to continue")
+
+    def generate(self, project):
+        self.ensure_output_file()
+        stuff = self.template.render({"project":project})
+        print stuff
+
+
 
 

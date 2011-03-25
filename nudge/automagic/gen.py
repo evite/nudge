@@ -48,7 +48,9 @@ class Project(object):
         self.destination = destination_dir
         assert isinstance(generators, list), "generators must be a list"
         self.generators = generators
-        [gen.generate(self.sections) for gen in self.generators]
+        project_dict = {"name":self.name,"identifier":self.identifier,
+                        "description":self.description,"sections":self.sections}
+        [gen.generate(project_dict) for gen in self.generators]
 
     def generate(self):
         """ Your subclasses should override this method """
@@ -70,8 +72,12 @@ class ProjectSection(object):
             options into friendlier locations """
         for ep in self.endpoints:
             # Function string
-            ep.function_name = ep.function.__name__
-            ep.function_info = ep.function.__doc__ or ""
+            if callable(ep.function):
+                ep.function_name = ep.function.__name__
+                ep.function_info = ep.function.__doc__ or ""
+            elif isinstance(ep.function, str):
+                ep.function_name = ep.function
+                ep.function_info = ep.function
             # Combine args and inargs into a nice informative list
             ep.args_list = []
             for arg in ep.sequential:

@@ -40,40 +40,71 @@ extension or two. See the simplecms example for some examples extending Nudge.
 import nudge.arg as args
 from nudge import serve, Endpoint, Args
 from nudge.renderer import HTML
+from nudge.automagic.gen import Project, ProjectSection
+from nudge.automagic.generate.stubs import PythonStubs
 
 class ExampleException(Exception): pass
-
-class HelloWorldService():
-
-    def index(self):
-        """ Just a starting point for the example service """
-        return """
-            <html>
-            <h1>Demo</h1>
-
-            <form action="/hello" method="get">
-            <input type="text" name="name" value="Joe"/>
-            <input type="submit" value="get"/>
-            </form>
-            </html>
-            """
-
-    def say_hello(self, name, number=0):
-        """ Say hello """
-        return "Hello %s" % name
-
-    def just_throw_an_exception(self):
-        raise ExampleException("omg what did you do?")
-
-    def assert_false(self):
-        assert False, "False can never be True"
-
-hws = HelloWorldService()
 
 def handle_example_exception(e):
     return 400, 'application/json', '{"exception":"bad request"}', None
 
-service_description = [
+module_service_description = [
+    Endpoint(name='Index',
+        method='GET',
+        uri='/$',
+        function="index",
+        renderer=HTML(),
+    ),
+    Endpoint(name='Post Hello',
+        method='POST',
+        uri='/hello/?$',
+        function="say_hello",
+        args=Args(
+            args.JsonBodyField('name'),
+        ),
+    ),
+    Endpoint(name='Put Hello',
+        method='PUT',
+        uri='/hello/(?P<name>[^/]+)?$',
+        function="say_hello",
+        args=Args(
+            args.String('name'),
+        ),
+    ),
+    Endpoint(name='Get Hello',
+        method='GET',
+        uri='/hello/?$',
+        function="say_hello",
+        args=Args(
+            args.String('name'),
+            args.Integer('number', optional=True),
+        ),
+    ),
+    Endpoint(name='I just break',
+        method='GET',
+        uri='/break/?$',
+        function="just_throw_an_exception",
+        args=Args(),
+        exceptions={
+            ExampleException: handle_example_exception,
+        }
+    ),
+    Endpoint(name='I just break',
+        method='GET',
+        uri='/break_fallback/?$',
+        function="just_throw_an_exception",
+        args=Args(),
+    ),
+    Endpoint(name='I throw an assertion exception',
+        method='GET',
+        uri='/break_assertion/?$',
+        function="assert_false",
+        args=Args(),
+    )
+]
+
+'''
+class_service_description = [
     Endpoint(name='Index',
         method='GET',
         uri='/$',
@@ -127,7 +158,35 @@ service_description = [
         args=Args(),
     )
 ]
+'''
 
 if __name__ == "__main__":
-    serve(service_description)
+     # Prep all the app's sections
+    '''
+    ProjectSection(
+        name="HelloWorld Class Section",
+        identifier="hello_world_class_section",
+        description="HelloWorld Class example section",
+        endpoints=class_service_description,
+        options=None,
+    ),
+    '''
+    sections = [
+        ProjectSection(
+            name="HelloWorld Module Section",
+            identifier="hello_world_module",
+            description="HelloWorld Module example section",
+            endpoints=module_service_description,
+            options=None,
+        )
+    ]
+    # This will generate all docs/clients
+    project = Project(
+        name="HelloWorld Example",
+        identifier="hello_world",
+        description="HelloWorld Example description",
+        sections=sections,
+        destination_dir="/tmp/hello_world_gen/",
+        generators=[PythonStubs(module='helloworld')]
+    )
 

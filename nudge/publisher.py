@@ -66,8 +66,7 @@ class Endpoint(object):
         assert isinstance(name, str)
         assert isinstance(method, str)
         assert isinstance(uri, str)
-        assert callable(function), "function must be callable, but was %s" %\
-            type(function)
+        assert callable(function) or isinstance(function, str), "function must be callable or a string, but was %s" % type(function)
 
         assert not exceptions or isinstance(exceptions, dict), \
             "exceptions must be a dict, but was type %s" % type(exceptions)

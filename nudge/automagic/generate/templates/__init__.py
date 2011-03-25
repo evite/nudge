@@ -1,4 +1,4 @@
-#!/usr/bin/env python                                                                                                                                                              
+#!/usr/bin/env python
 #
 # Copyright (C) 2011 Evite LLC
 
@@ -15,11 +15,24 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+__import__('pkg_resources').declare_namespace(__name__)
 
-from nudge.automagic.generate import AutomagicGenerator
-from nudge.automagic.generate.templates import get_template
+import os
 
-class PythonStubs(AutomagicGenerator):
-    extension = 'py'
-    template = get_template('python.py')
+from jinja2 import Environment, FileSystemLoader
 
+template_dir = "/".join(__file__.split("/")[0:-1]) + "/" 
+template_env = Environment(loader=FileSystemLoader(template_dir))
+
+__all__ = [
+    'get_template',
+]
+
+def get_template(filename=None):
+    assert filename, "I need a filename, smartypants"
+    text=None
+    filepath = os.path.join(template_dir, filename)
+    assert os.path.exists(filepath), "The template file doesn't exist"
+    text = open(filepath, "r").read()
+    assert text, "How about some text"
+    return template_env.get_template(filename)
