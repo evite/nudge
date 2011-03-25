@@ -66,6 +66,6 @@ var {{ project.identifier }} = {{ project.identifier }} || {};
     };
 
 
-{{% endfor %}}
-{{% endfor %}}
+{% endfor %}
+{% endfor %}
 

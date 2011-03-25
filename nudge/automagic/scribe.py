@@ -1,4 +1,3 @@
-#!/usr/bin/env python                                                                                                                                                              
 #
 # Copyright (C) 2011 Evite LLC
 
@@ -16,10 +15,26 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-__import__('pkg_resources').declare_namespace(__name__)
-
 import os
-from nudge.automagic.generate.templates import get_template
+from jinja2 import Environment, FileSystemLoader
+
+template_dir = "/".join(__file__.split("/")[0:-1]) + "/templates" 
+print "template dir: ", template_dir
+template_env = Environment(loader=FileSystemLoader(template_dir))
+
+__all__ = [
+    'get_template',
+    'AutomagicGenerator',
+]
+
+def get_template(filename=None):
+    assert filename, "I need a filename, smartypants"
+    text=None
+    filepath = os.path.join(template_dir, filename)
+    assert os.path.exists(filepath), "The template file doesn't exist"
+    text = open(filepath, "r").read()
+    assert text, "How about some text"
+    return template_env.get_template(filename)
 
 class AutomagicGenerator(object):
     extension = 'txt'
@@ -43,6 +58,14 @@ class AutomagicGenerator(object):
         stuff = self.template.render({"project":project})
         print stuff
 
+class PythonStubs(AutomagicGenerator):
+    extension = 'py'
+    template = get_template('python.py')
 
+class JSClient(AutomagicGenerator):
+    extension = 'js'
+    template = get_template('javascript.js')
 
-
+class SphinxDocs(object):
+    extension = 'rst'
+    template = get_template('sphinx.rst')

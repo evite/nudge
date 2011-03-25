@@ -40,8 +40,8 @@ extension or two. See the simplecms example for some examples extending Nudge.
 import nudge.arg as args
 from nudge import serve, Endpoint, Args
 from nudge.renderer import HTML
-from nudge.automagic.gen import Project, ProjectSection
-from nudge.automagic.generate.stubs import PythonStubs
+from nudge.project import Project, ProjectSection
+from nudge.automagic.scribe import PythonStubs
 
 class ExampleException(Exception): pass
 

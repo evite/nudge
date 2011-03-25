@@ -29,9 +29,8 @@ import nudge.arg as args
 from nudge import Endpoint, Args
 from nudge.renderer import HTML, Result, Redirect
 from nudge.publisher import ServicePublisher
-from nudge.automagic.gen import Project, ProjectSection
-from nudge.automagic.generate.javascript import JSClient
-from nudge.automagic.generate.sphinx import SphinxDocs
+from nudge.project import Project, ProjectSection
+from nudge.automagic.scribe import JSClient, SphinxDocs
 
 from google.appengine.api import users
 from google.appengine.ext import db
