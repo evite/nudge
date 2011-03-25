@@ -19,6 +19,7 @@
 import types
 import nudge
 import nudge.validator as validate
+from nudge.utils import dehump
 
 __all__ = [
     'Arg',
@@ -92,7 +93,10 @@ class Arg(object):
     
 class CustomArg(Arg):
 
-    def __init__(self):
+    def __init__(self, name=None):
+        if not name:
+            name = dehump(self.__name__)
+        self.name = name
         pass
     
     def argspec(self):
@@ -228,6 +232,7 @@ class JsonBodyField(CustomArg):
         dict (so you dont need to use this, you can use normal args).
     """
     def __init__(self, fieldname, optional=False, validator=None):
+        self.name = fieldname
         def func(req, inargs):
             try:
                 val = _get_json_body(req)[fieldname]

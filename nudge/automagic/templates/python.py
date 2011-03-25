@@ -20,19 +20,16 @@
   {{ project.name }} - {{ project.identifier }}
   {{ project.description }}
 '''
-
 {% for section in project.sections %}
-
 /*
  * Section {{ section.name }} - {{ section.indentifier }}
  * {{ section.description }}
  */ 
 
 {% for ep in section.endpoints %}
-def {{ ep.function_name }}({% for arg in ep.sequential %}{{ arg.name }}{% if arg.optional %}={{ arg.default }}{% endif %}, {% endfor %}{% if ep.named %} , {% endif %}{% for arg in ep.named %}, {{ arg.name }}{% if arg.optional %}={{ arg.default }}{% endif %}{% endfor %}):
-    pass
-
+def {{ ep.function_name }}({{ ep.args }}):{% for name in ep.asserts %}
+    assert {{ name }}, "{{ name }} must not be None."{% endfor %}
+    {% if not ep.asserts %}pass{% endif %}
 
 {% endfor %}
 {% endfor %}
-

@@ -16,10 +16,12 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 import os
+
+from nudge.utils import Dict
+
 from jinja2 import Environment, FileSystemLoader
 
 template_dir = "/".join(__file__.split("/")[0:-1]) + "/templates" 
-print "template dir: ", template_dir
 template_env = Environment(loader=FileSystemLoader(template_dir))
 
 __all__ = [
@@ -55,17 +57,58 @@ class AutomagicGenerator(object):
         raise Exception("This module already exists.  Please remove it to continue")
 
     def generate(self, project):
-        stuff = self.template.render({"project":project})
-        print stuff
+        data = self._prepare_data(Dict(project))
+        stuff = self.template.render(data)
         file = open(self.output_file, 'wr')
         file.write(stuff)
         file.close()
+
+    def _prepare_data(self, project):
+        return {'project':project}
 
 class PythonStubs(AutomagicGenerator):
     extension = 'py'
     template = get_template('python.py')
 
-    #def generate(self, project):
+    def _prepare_data(self, project):
+        def arg_string(endpoint):
+            args = []
+            args.extend([arg_repr(arg) for arg in endpoint.sequential])
+            args.extend([arg_repr(arg, True) for arg in endpoint.named])
+            return ', '.join(args)
+
+        def arg_repr(arg, named=False):
+            if named:
+                return '='.join([str(arg.name), str(None)])
+            return arg.name
+
+        def endpoint_data(name, args):
+            asserts = [name for name, arg in args.named.iteritems() if not arg.optional]
+            asserts.extend([name for name, arg in args.sequential_dict.iteritems() if not arg.optional])
+            return {'function_name':name, 'args':arg_string(args), 'asserts':list(set(asserts))}
+
+        sections = []
+        for section in project.sections:
+            section_dict = {
+                'name':section.name,
+                'identifier':section.identifier,
+                'description':section.description,
+                'endpoints': []
+            }
+            endpoints = {}
+            for ep in section.endpoints:
+                current = endpoints.setdefault(ep.function_name, Dict({'sequential':[],'sequential_dict':{},'named':{}}))
+                # Preserve order...it's super important
+                if len(ep.sequential) > len(current.sequential):
+                    current.sequential = ep.sequential
+                    current.sequential_dict = dict([(arg.name, arg) for arg in ep.sequential])
+                current.named.update(dict([(arg.name, arg) for arg in current.named]))
+            section_dict['endpoints'] = [endpoint_data(name, args) for name, args in endpoints.iteritems()]
+            sections.append(section_dict)
+
+        project.sections = sections
+        return Dict({'project':project})
+
 
 class JSClient(AutomagicGenerator):
     extension = 'js'
