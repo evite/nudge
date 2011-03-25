@@ -17,7 +17,7 @@
 
 import os
 
-from nudge.utils import Dict
+from nudge.utils import Dict, hump, get_class_and_function
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -88,16 +88,20 @@ class PythonStubs(AutomagicGenerator):
                 'name':section.name,
                 'identifier':section.identifier,
                 'description':section.description,
-                'endpoints': []
+                'groupings': []
             }
-            endpoints = {}
+            classes = {}
+            groupings = {}
             for ep in section.endpoints:
-                current = endpoints.setdefault(ep.function_name, Dict({'sequential':[],'named':{}}))
+                class_name, function_name = get_class_and_function(ep.function_name)
+                current = groupings.setdefault(class_name, {}).setdefault(function_name, Dict({'sequential':[],'named':{}}))
                 # Preserve order...it's super important
                 if len(ep.sequential) > len(current.sequential):
                     current.sequential = ep.sequential
                 current.named.update(dict([(arg.name, arg) for arg in current.named]))
-            section_dict['endpoints'] = [{'function_name':name, 'args':arg_string(args)} for name, args in endpoints.iteritems()]
+            for class_name, endpoints in groupings.iteritems():
+                data = [{'function_name':name, 'args':arg_string(args)} for name, args in endpoints.iteritems()]
+                section_dict.setdefault('groupings',[]).append({"name":class_name if class_name else False, "endpoints":data})
             sections.append(section_dict)
 
         project.sections = sections

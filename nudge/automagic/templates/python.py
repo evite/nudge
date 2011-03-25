@@ -20,15 +20,25 @@
   {{ project.name }} - {{ project.identifier }}
   {{ project.description }}
 '''
+class UnimplementedException(Exception):
+    message = "I am not implemented, please do something about that."
 {% for section in project.sections %}
 '''
   Section {{ section.name }} - {{ section.indentifier }}
   {{ section.description }}
 ''' 
-
-{% for ep in section.endpoints %}
+{% for grouping in section.groupings %}
+{% if grouping.name %}
+class {{ grouping.name }}():
+    {% for ep in grouping.endpoints %}
+    def {{ ep.function_name }}({{ ep.args }}):
+        raise UnimplementedException()
+    {% endfor %}
+{% else %}
+{% for ep in grouping.endpoints %}
 def {{ ep.function_name }}({{ ep.args }}):
-    pass
-
+    raise UnimplementedException()
+{% endfor %}
+{% endif %}
 {% endfor %}
 {% endfor %}

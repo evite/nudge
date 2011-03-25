@@ -66,7 +66,7 @@ module_service_description = [
     Endpoint(name='Put Hello',
         method='PUT',
         uri='/hello/(?P<name>[^/]+)?$',
-        function="say_hello",
+        function="the_talker.say_hello",
         args=Args(
             args.String('name'),
         ),
@@ -74,7 +74,7 @@ module_service_description = [
     Endpoint(name='Get Hello',
         method='GET',
         uri='/hello/?$',
-        function="say_hello",
+        function="the_talker.say_hello",
         args=Args(
             args.String('name'),
             args.Integer('number', optional=True),
@@ -103,43 +103,11 @@ module_service_description = [
     )
 ]
 
-'''
 class_service_description = [
-    Endpoint(name='Index',
-        method='GET',
-        uri='/$',
-        function=hws.index,
-        renderer=HTML(),
-    ),
-    Endpoint(name='Post Hello',
-        method='POST',
-        uri='/hello/?$',
-        function=hws.say_hello,
-        args=Args(
-            args.JsonBodyField('name'),
-        ),
-    ),
-    Endpoint(name='Put Hello',
-        method='PUT',
-        uri='/hello/(?P<name>[^/]+)?$',
-        function=hws.say_hello,
-        args=Args(
-            args.String('name'),
-        ),
-    ),
-    Endpoint(name='Get Hello',
-        method='GET',
-        uri='/hello/?$',
-        function=hws.say_hello,
-        args=Args(
-            args.String('name'),
-            args.Integer('number', optional=True),
-        ),
-    ),
-    Endpoint(name='I just break',
+        Endpoint(name='I just break',
         method='GET',
         uri='/break/?$',
-        function=hws.just_throw_an_exception,
+        function="im_another_class.just_throw_an_exception",
         args=Args(),
         exceptions={
             ExampleException: handle_example_exception,
@@ -148,30 +116,27 @@ class_service_description = [
     Endpoint(name='I just break',
         method='GET',
         uri='/break_fallback/?$',
-        function=hws.just_throw_an_exception,
+        function="im_another_class.just_throw_an_exception",
         args=Args(),
     ),
     Endpoint(name='I throw an assertion exception',
         method='GET',
         uri='/break_assertion/?$',
-        function=hws.assert_false,
+        function="im_another_class.assert_false",
         args=Args(),
     )
 ]
-'''
 
 if __name__ == "__main__":
      # Prep all the app's sections
-    '''
-    ProjectSection(
-        name="HelloWorld Class Section",
-        identifier="hello_world_class_section",
-        description="HelloWorld Class example section",
-        endpoints=class_service_description,
-        options=None,
-    ),
-    '''
     sections = [
+        ProjectSection(
+            name="HelloWorld Class Section",
+            identifier="hello_world_class_section",
+            description="HelloWorld Class example section",
+            endpoints=class_service_description,
+            options=None,
+        ),
         ProjectSection(
             name="HelloWorld Module Section",
             identifier="hello_world_module",
