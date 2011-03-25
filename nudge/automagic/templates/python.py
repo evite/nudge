@@ -29,7 +29,7 @@
  */ 
 
 {% for ep in section.endpoints %}
-def {{ ep.function_name }}({% for arg in ep.arg_list%}{{ arg.name }}{% if arg.optional %}={{ arg.default }}{% endif %}{% endfor %}):
+def {{ ep.function_name }}({% for arg in ep.sequential %}{{ arg.name }}{% if arg.optional %}={{ arg.default }}{% endif %}, {% endfor %}{% if ep.named %} , {% endif %}{% for arg in ep.named %}, {{ arg.name }}{% if arg.optional %}={{ arg.default }}{% endif %}{% endfor %}):
     pass
 
 
