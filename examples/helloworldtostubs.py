@@ -17,25 +17,48 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 """
-A simple hello world example that illustrates how easy it is to write
-a web application using Nudge.
+A simple hello world example that illustrates how easy it is to generate
+python module/class/method stubs using Nudge.
 
 It is recommended to use a class or module for each logical section of your app.
 So if you were making Evite, you would probably have a separate class for
 Users, Events, Gallery, etc. These classes are usually implemented 
 independently of anything HTTP related (and in different files).
 
-You will notice our class methods accept and return regular Python variables.
-This makes your service classes extremely portable, elegant, and easy to test.
+SO, when you're in startup mode, you can build your endpoints first
+if you want to, but have the function be something of the form:
+    module.class.function_name => 
+    OR
+    function_name =>
+        default modulename with module level function of name function_name
+    OR
+    module..function_name => 
+        module of given name with module level function of name function_name
+    OR
+    class_name.function_name =>
+        default module will have class called class_name with function
+        of name function_name
 
-The service_description is where the real magic happens. Each Endpoint
-describes in detail one type of HTTP request the user of your application
-might make. Endpoints are designed to handle request routing, 
-input transformation and validation, error/exception handling, 
-and output formatting.
+NOTICE BELOW:
+    module_service_description:
+        this..this
+        im_another_class.say_hello
+        this.the_talker.say_hello
+    class_service_description:
+        im_another_class.just_throw_an_exception
 
-Anything HTTP should be possible with Nudge, but you may need to write an
-extension or two. See the simplecms example for some examples extending Nudge.
+this example will output 2 modules:
+    1) this
+    2) helloworld
+
+Take a look and see what methods ended up where and it'll help you
+make sense of it all ;)
+
+These combinations are across all the endpoints in all of your sections,
+SO if you have this_module..that_function in Section "A" and also in
+Section "B", there will only be one this_module created with one
+function named that_function.
+
 """
 import nudge.arg as args
 from nudge import serve, Endpoint, Args
@@ -52,13 +75,13 @@ module_service_description = [
     Endpoint(name='Index',
         method='GET',
         uri='/$',
-        function="index",
+        function="this..index",
         renderer=HTML(),
     ),
     Endpoint(name='Post Hello',
         method='POST',
         uri='/hello/?$',
-        function="say_hello",
+        function="im_another_class.say_hello",
         args=Args(
             args.JsonBodyField('name'),
         ),
@@ -74,7 +97,7 @@ module_service_description = [
     Endpoint(name='Get Hello',
         method='GET',
         uri='/hello/?$',
-        function="the_talker.say_hello",
+        function="this.the_talker.say_hello",
         args=Args(
             args.String('name'),
             args.Integer('number', optional=True),

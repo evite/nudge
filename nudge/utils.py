@@ -32,6 +32,8 @@ def hump(string):
     return skyline_case.sub(fix_ribs, string)
 
 def build_class_name(string):
+    if not string:
+        return ''
     result = hump(string)
     return result[0].upper()+result[1:]
 
@@ -39,9 +41,12 @@ def build_class_name(string):
     This will take something like:
         string = 'this.that.the_thing_that_does_stuff.other'
     and return:
-        ('TheThingThatDoesStuff', 'other')
+        ('that', 'the_thing_that_does_stuff', 'other')
+        or
+        ('that', 'TheThingThatDoesStuff', 'other')
 '''
-def get_class_and_function(input, camel_case=True):
+def breakup_function_path(input, camel_case=True):
+    package = ''
     class_name, dot, function_name = input.rpartition('.')
     if not function_name:
         function_name = class_name
@@ -50,4 +55,6 @@ def get_class_and_function(input, camel_case=True):
         package, dot, class_name = class_name.rpartition('.')
         if camel_case:
             class_name = build_class_name(class_name)
-    return class_name, function_name
+    if package:
+        garbage, dot, package = package.rpartition('.')
+    return package, class_name, function_name

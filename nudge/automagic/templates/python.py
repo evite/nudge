@@ -22,23 +22,17 @@
 '''
 class UnimplementedException(Exception):
     message = "I am not implemented, please do something about that."
-{% for section in project.sections %}
-'''
-  Section {{ section.name }} - {{ section.indentifier }}
-  {{ section.description }}
-''' 
-{% for grouping in section.groupings %}
-{% if grouping.name %}
-class {{ grouping.name }}():
-    {% for ep in grouping.endpoints %}
+{% for class_item in classes %}
+{% if class_item.name %}
+class {{ class_item.name }}():
+    {% for ep in class_item.endpoints %}
     def {{ ep.function_name }}({{ ep.args }}):
         raise UnimplementedException()
     {% endfor %}
 {% else %}
-{% for ep in grouping.endpoints %}
+{% for ep in class_item.endpoints %}
 def {{ ep.function_name }}({{ ep.args }}):
     raise UnimplementedException()
 {% endfor %}
 {% endif %}
-{% endfor %}
 {% endfor %}
