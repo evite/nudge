@@ -89,6 +89,10 @@ class PythonStubs(AutomagicGenerator):
         modules = {}
         for section in project.sections:
             for ep in section.endpoints:
+                # module_name and class_name can both be ''.  They'll be put in the default module as simple functions
+                # module_name..function_name means a module level function in the given module
+                # something.otherthing = default module, something = class_name, otherthing = function_name
+                # something = default module, module level function called something
                 module_name, class_name, function_name = breakup_function_path(ep.function_name)
                 current = modules.setdefault(module_name,{}).setdefault(class_name, {}).setdefault(function_name, Dict({'sequential':[],'named':{}}))
                 # Preserve order...it's super important
