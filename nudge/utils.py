@@ -18,7 +18,7 @@ def dehump(string):
     def fix_caps(match):
         result = ''
         for group in match.groups():
-            result = result + group[0:len(group)-1]+"_"+group[len(group)-1].lower()
+            result += group[0:len(group)-1]+"_"+group[len(group)-1].lower()
         return result
     return camel_case.sub(fix_caps, string)
 
@@ -27,7 +27,7 @@ def hump(string):
     def fix_ribs(match):
         result = ''
         for group in match.groups():
-            result = result + group[0:len(group)-2]+group[len(group)-1].upper()
+            result += group[0:len(group)-2]+group[len(group)-1].upper()
         return result
     return skyline_case.sub(fix_ribs, string)
 
@@ -45,7 +45,7 @@ def build_class_name(string):
         or
         ('that', 'TheThingThatDoesStuff', 'other')
 '''
-def breakup_function_path(input, camel_case=True):
+def breakup_path(input, camel_case=True):
     package = ''
     class_name, dot, function_name = input.rpartition('.')
     if not function_name:

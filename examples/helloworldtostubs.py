@@ -175,6 +175,6 @@ if __name__ == "__main__":
         description="HelloWorld Example description",
         sections=sections,
         destination_dir="/tmp/hello_world_gen/",
-        generators=[PythonStubs(module='helloworld')]
+        generators=[PythonStubs(filename='helloworld')]
     )
 
