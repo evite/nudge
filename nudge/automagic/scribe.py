@@ -194,8 +194,8 @@ class SphinxDocs(AutomagicGenerator):
         return Dict({'project_name':project.name,
                      'copyright_year':'2011',
                      'company':'test company',
-                     'version':'test.version',
-                     'release':'test.release',
+                     'version':'1.0',
+                     'release':'1',
                      'htmlhelp_basename':'test_basename_help',
                      'sections': sections.values(), 
                      'endpoints':endpoints.values()})
