@@ -186,11 +186,19 @@ class SphinxDocs(AutomagicGenerator):
                 default_args = Dict({'file':name, 'dir':section_name,
                                      'args':[], 'uri':uri, 'name':ep.name, 
                                      'service':section.name, 'desc':desc,
-                                     'http_method':ep.method
+                                     'http_method':ep.method, 
+                                     'max_arg_name':len('Fields'),
+                                     'max_arg_desc':len('Description'),
                                     })
                 current = endpoints.setdefault(ep.function_name, default_args)
                 current.args.extend(ep.sequential)
                 current.args.extend(ep.named)
+                for arg in current.args:
+                    current.max_arg_name = \
+                        max(current.max_arg_name, len(arg.name))
+                    current.max_arg_desc = max(current.max_arg_desc, 
+                                               len(self._build_arg_desc(arg)))
+                
         return Dict({'project_name':project.name,
                      'copyright_year':'2011',
                      'company':'test company',
@@ -199,6 +207,32 @@ class SphinxDocs(AutomagicGenerator):
                      'htmlhelp_basename':'test_basename_help',
                      'sections': sections.values(), 
                      'endpoints':endpoints.values()})
+
+    def _build_arg_desc(self, arg):
+        desc = arg.__doc__ or '' 
+        desc_lines = [d.strip() for d in desc.splitlines()]
+        return ' '.join(desc_lines)
+
+    def _build_arg_table_items(self, endpoint):
+        columns = ['Fields', 'Required', 'Description']
+        separators = []
+        separators.append("="*endpoint.max_arg_name)
+        separators.append("="*len('Required'))
+        separators.append("="*endpoint.max_arg_desc)
+        args = []
+        endpoint.arg_table_column_headers = ' '.join(columns)
+        endpoint.arg_table_separator = ' '.join(separators)
+        for arg in endpoint.args:
+            field = arg.name
+            field += " "*(endpoint.max_arg_name-len(field))
+            required = " "*(len('Required'))
+            if arg.optional:
+                required = "x" + " "*(len('Required')-1)
+            desc = self._build_arg_desc(arg)
+            arg_desc = ' '.join([field, required, desc])
+            print arg_desc
+            args.append(arg_desc)
+        endpoint.arg_strings = args
 
     def generate(self, project):
         data = self._prepare_data(Dict(project))
@@ -212,8 +246,10 @@ class SphinxDocs(AutomagicGenerator):
         # Sphinx needs an index.rst
         filename = self._filepath('index', subdir='source')
         self._render_and_write(self.index_template, data, filename)
+
         # Then there is one file for each endpoint (endpoint_name.rst)
         for endpoint in data.endpoints:
+            self._build_arg_table_items(endpoint)
             filename = self._filepath(skyline_text(endpoint.name), 
                                       subdir='source/'+endpoint.dir)
             self._render_and_write(self.endpoint_template, endpoint, filename)

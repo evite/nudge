@@ -88,7 +88,7 @@ module_service_description = [
     ),
     Endpoint(name='Put Hello',
         method='PUT',
-        uri='/hello/(?P<name>[^/]+)?$',
+        uri='/hello/(?P<name>[^/]+)/?$',
         function="the_talker.say_hello",
         args=Args(
             args.String('name'),

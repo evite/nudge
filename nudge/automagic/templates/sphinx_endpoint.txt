@@ -14,10 +14,11 @@ Http Method
 ------------------
 {{ http_method }}
 {% if args %} 
-=========================  ========  =================================================
-Fields                     Required  Description
-=========================  ========  =================================================
-{% for arg in args %}{{ arg.name }}             {% if arg.optional %}x{% endif %}         {{ arg.__doc__ }}
-{% endfor %}
-=========================  ========  =================================================
+Arguments
+------------------
+{{ arg_table_separator }}
+{{ arg_table_column_headers }}
+{{ arg_table_separator }}
+{% for arg in arg_strings %}{{ arg }}
+{% endfor %}{{ arg_table_separator }}
 {% endif %}
