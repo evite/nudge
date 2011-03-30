@@ -64,7 +64,7 @@ import nudge.arg as args
 from nudge import serve, Endpoint, Args
 from nudge.renderer import HTML
 from nudge.project import Project, ProjectSection
-from nudge.automagic.scribe import PythonStubs
+from nudge.automagic.scribe import PythonStubs, SphinxDocs
 
 class ExampleException(Exception): pass
 
@@ -175,6 +175,7 @@ if __name__ == "__main__":
         description="HelloWorld Example description",
         sections=sections,
         destination_dir="/tmp/hello_world_gen/",
-        generators=[PythonStubs(filename='helloworld')]
+        generators=[PythonStubs(filename='helloworld'), SphinxDocs(dir='/tmp/sphinx')],
+        domain="http://this.example.com"
     )
 

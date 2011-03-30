@@ -1,0 +1,12 @@
+{{ project_name }} documentation
+=======================================
+
+{% for section in sections %}
+{{ section.name }}:
+
+.. toctree::
+   :maxdepth: 1
+
+   {% for endpoint in section.endpoints %}{{ section.dir }}/{{ endpoint }}
+   {% endfor %}
+{% endfor %}

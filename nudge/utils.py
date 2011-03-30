@@ -20,7 +20,7 @@ def dehump(string):
         for group in match.groups():
             result += group[0:len(group)-1]+"_"+group[len(group)-1].lower()
         return result
-    return camel_case.sub(fix_caps, string)
+    return camel_case.sub(fix_caps, string).strip()
 
 skyline_case = re.compile('([a-z]+_[a-z])')
 def hump(string):
@@ -29,7 +29,16 @@ def hump(string):
         for group in match.groups():
             result += group[0:len(group)-2]+group[len(group)-1].upper()
         return result
-    return skyline_case.sub(fix_ribs, string)
+    return skyline_case.sub(fix_ribs, string).strip()
+
+title_case = re.compile('(\s+[^\s])')
+def skyline_text(string):
+    def fix_spaces(match):
+        result = ''
+        for group in match.groups():
+            result += '_' + group[len(group)-1]
+        return result
+    return title_case.sub(fix_spaces, string).lower().strip()
 
 def build_class_name(string):
     if not string:

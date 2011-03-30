@@ -34,7 +34,7 @@ class Project(object):
         Like clients or spynix docs etc
         """
     def __init__(self, name, identifier, description, sections, 
-            destination_dir, generators):
+            destination_dir, generators, domain):
         #
         self.name = name
         assert re.match("[_a-zA-Z]+[\w]*", identifier), \
@@ -43,10 +43,12 @@ class Project(object):
         self.description = description
         self.sections = sections
         self.destination = destination_dir
+        self.domain = domain
         assert isinstance(generators, list), "generators must be a list"
         self.generators = generators
         project_dict = {"name":self.name,"identifier":self.identifier,
-                        "description":self.description,"sections":self.sections}
+                        "description":self.description,"sections":self.sections,
+                        "domain":self.domain}
         [gen.generate(project_dict) for gen in self.generators]
 
     def generate(self):
