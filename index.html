@@ -20,11 +20,11 @@
     h1 .small { font-size: 0.4em; }
     h1 a { text-decoration: none }
     h2 { font-size: 1.5em; }
-    h3 { text-align: center; }
+    h3 { font-size: 1em; }
     a { color: #369; }
     .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
     .download { float: right; }
-    pre { background: #000; color: #fff; padding: 15px;}
+    pre { background: #555; color: #fff; padding: 15px;}
     hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
     .footer { text-align:center; padding-top:30px; font-style: italic; }
   </style>
@@ -50,7 +50,7 @@
     </div>
 
     <h2>Contact</h2>
-<p>Evite Inc. (github@evitelabs.com)<br/>      </p>
+    <p>Evite Inc. (github@evitelabs.com)<br/>      </p>
 
 
     <h2>Download</h2>
@@ -63,6 +63,93 @@
       by running:
       <pre>$ git clone git://github.com/evite/nudge</pre>
     </p>
+
+    <h2>Documentation</h2>
+    <ol>
+        <li><a href="#args">Args</a></li>
+        <li><a href="#endpoints">Endpoints</a></li>
+        <li><a href="#service_publisher">Service Publisher</a></li>
+    </ol>
+
+    <h3 id="args">Args</h3>
+    <p>Any arg your service would need to work is set up as an Arg.  There are a 
+    few such as String, Boolean, Date, Integer and Json set up for you.  These
+    should really just sanitize your inputs before they ever get to the real
+    service.  So, any problems will error out before, and your service code
+    can stay clean!</p>
+    <p>For instance, if you needed to know the authorized user's id for YOUR app,
+    you would make a new arg that would look something like the following:</p>
+    <pre><code>
+    class UserId(CustomArg):
+        
+        def __init__(self):
+            def func(req, inargs):
+                auth_header = req.headers.get('x_your_auth_header')
+                if not auth_header:
+                    return None
+                return your_auth_class.authorize_user(auth_header) 
+            self.argspec = func
+    </code></pre>
+    <h3 id="endpoints">Endpoints</h3>
+    <p>This is exacly what you think it is.  It's a descriptor class for a service
+    endpoint.  It publishes a specific service call to a uri, an http method (GET, POST, 
+    PUT etc.), and allows for a renderer on the way back.  This first example is the
+    simplest you can really do.  It is from our hello world example.  You have an index 
+    endpoint that you GET that ends up returning rendered html.</p>
+    <pre><code>
+    Endpoint(name='Index',
+        method='GET',
+        uri='/$',
+        function=hws.index,
+        renderer=HTML(),
+    )
+    </code></pre>
+    <p>This next example is a little more complicated.  It is from our twitter example.
+    This is also an index Endpoint, but it has <a href="#args">Args</a> and exceptions
+    that *could* be thrown.</p>
+    <pre><code>
+    Endpoint(
+        'index',
+        'GET',
+        '/$',
+        index,
+        args=Args(
+            UserTwitterClient(),
+            nudge.arg.String('type', optional=True),
+        ),
+        renderer=Identity('text/html'),
+        exceptions={
+            TwitterAuthException: handle_exception,
+        },
+    )
+    </code></pre>
+    
+        
+    <h3 id="service_publisher">Service Publisher</h3>
+    <p>Ok, so now you have Endpoints.  What do you do now?  Ah, you make a simple list and
+    ask nudge to serve them.  Hmmm, really?  Nooo, it can't be that easy.  Yup! Really!
+    It is that easy.  Ask nudge to serve your endpoints and all of the sudden you have
+    a full-fledged service running.</p>
+    <pre><code>
+    from nudge import serve, Endpoint, Args
+    service_description = [endpoint1, endpoint2, endpoint3, ..., endpointN]
+    serve(service_description)
+    </code></pre>
+    <p>Because the thing being served is just a list, you can use standard list operations
+    to push two+ services together to run many on one port all you want!</p>
+    <pre><code>
+    from nudge import serve, Endpoint, Args
+
+    #Some user service for example
+    service1 = [endpoint1, endpoint2, endpoint3, ..., endpointN]
+    #Some content service for example
+    service2 = [endpointa, endpointb, endpointc, ..., endpointX]
+
+    service1.extend(service2)
+
+    serve(service1)
+    </code></pre>
+
 
     <div class="footer">
       get the source code on GitHub : <a href="http://github.com/evite/nudge">evite/nudge</a>
