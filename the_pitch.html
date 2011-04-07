@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+
+  <title>evite/nudge @ GitHub</title>
+
+  <style type="text/css">
+    body {
+      margin-top: 1.0em;
+      background-color: #fff;
+      font-family: Helvetica,Arial;
+      color: #000000;
+    }
+    #container {
+      margin: 0 auto;
+      width: 700px;
+    }
+    h1 { font-size: 3.8em; margin-bottom: 3px; color: #369; }
+    h1 .small { font-size: 0.4em; }
+    h1 a { text-decoration: none }
+    h2 { font-size: 2em; }
+    h3 { display:block; font-size: 1.5em; border-bottom: 1px solid #000; }
+    a { color: #369; }
+    .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
+    .download { float: right; }
+    pre { background: #555; color: #fff; padding: 15px;}
+    hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
+    .footer { text-align:center; padding-top:30px; font-style: italic; }
+  </style>
+</head>
+
+<body>
+  <a href="http://github.com/evite/nudge"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
+
+  <div id="container">
+
+    <h1><a href="http://github.com/evite/nudge">Nudge</a>
+      <span class="small">by <a href="http://github.com/evite">Evite</a></span></h1>
+
+    <div class="description">
+      A python services publisher that works with the wsgi interface
+    </div>
+    Go <a href="index.html">back</a>
+
+    <h2>Most Web Servers Frameworks Blow</h2>
+    <p> You know they do.  They're a PITA to deal with and they're messy.</p>
+
+    <h3>Problem: Mo Endpoints, mo problems</h3>
+    <p>see <a href="http://en.wikipedia.org/wiki/Biggie_Smalls" target="_blank">reference</a></p>
+    <p>No really, what happens when you need a new endpoint?</p>
+    <pre><code>
+    ctrl-c -> ctrl-v
+    ctrl-c -> ctrl-v
+    ctrl-c -> ctrl-v
+    ... to inifinity and beyond
+    </code></pre>
+
+    <p>or if you're a hipster:</p>
+    <pre><code>
+    ma 
+    y'a
+    p
+    </code></pre>
+    <h3>Solution: Our Endpoints</h3>
+    <p>These descriptor classes simply map an http method, uri, some args, a function and some other 
+    nifty things and you're done.  Want a new endpoint?  Make a new descriptor class.  Done and done.
+    </p>
+
+    <h3>Problem: You got your validation in my function.</h3>
+    <p>Input validation is married to the actual service.  
+    How many times do you want to check:</p>
+
+    <pre><code>
+    try:
+        i = int(val)
+    except:
+        throw ValidationError()
+    </code></pre>
+    <p>or alternately:</p>
+    <pre><code>
+    assert isinstance(val, int), "This has to be an int"
+    </code></pre>
+
+    <h3>Solution: Our Args</h3>
+    <p>You simply have to add an Arg to your Endpoint's args and the input will be validated and in
+    the correct type by the time your functional code receives it.  Otherwise an appropriate error
+    is sent back.  It's OMG magical!  The following is the built-in Int validation that Nudge provides.</p>
+    <pre><code>
+    def Int(min_=None, max_=None):
+        def f(s):
+            try:
+                i = int(s)
+            except (ValueError, TypeError):
+                raise ValidationError("must be a number")
+            if (min_ and i < min_):
+                raise ValidationError("must be >= %d" % min_)
+            if (max_ and i > max_):
+                raise ValidationError("must be <= %d" % max_)
+                
+            return i
+        return f
+
+    </code></pre>
+
+    <h3>The Awesome: Breaking up is hard to do, but you don't have to!</h3>
+    <p>We love all flavors!</p>
+    <pre>
+    Grig> WTF-ever restish is the shit!
+
+    Josh> Tornado is the most awesome shit ever!!!!
+
+    Dan> OMG, you are so wrong, have you seen the "stack on eventlet"?
+
+    Warren> Can't you a**holes stick to one stack?
+    </pre>
+
+
+    <h3>The Awesome: Defined once, deployed wherever</h3>
+    <p></p>
+    <ol>
+        <li>Create multiple services</li>
+        <li>Develop and test separately</li>
+        <li>Deploy together</li>
+    </ol>
+
+
+    <div class="footer">
+      get the source code on GitHub : <a href="http://github.com/evite/nudge">evite/nudge</a>
+    </div>
+
+  </div>
+
+  
+</body>
+</html>
