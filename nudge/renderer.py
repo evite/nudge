@@ -34,6 +34,7 @@ __all__ = [
     'HTML',
     'Ical',
     'Identity',
+    'Plain',
 ]
 
 class Result(object):
@@ -179,6 +180,15 @@ class HTML(object):
         return Result(
             content=content,
             content_type='text/html; charset=utf-8',
+            http_status=200,
+        )
+
+class Plain(object):
+
+    def __call__(self, content):
+        return Result(
+            content=content,
+            content_type='text/plain',
             http_status=200,
         )
 
