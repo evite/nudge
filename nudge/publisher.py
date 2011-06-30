@@ -60,12 +60,12 @@ class Endpoint(object):
     sequential = []
     named = {}
 
-    def __init__(self, name=None, method=None, uri=None, function=None, 
+    def __init__(self, name=None, method=None, uri=None, uris=None, function=None, 
                  args=None, exceptions=None, renderer=None):
         # Someday support unicode here, for now only bytestrings.
         assert isinstance(name, str)
         assert isinstance(method, str)
-        assert isinstance(uri, str)
+        assert (not uris and isinstance(uri, str)) or (not uri and isinstance(uris, types.ListType)), "Endpoints must have either a uri or uris, but not both"
         assert callable(function) or isinstance(function, str), "function must be callable or a string, but was %s" % type(function)
 
         assert not exceptions or isinstance(exceptions, dict), \
@@ -74,7 +74,7 @@ class Endpoint(object):
 
         self.name = name
         self.method = method
-        self.uri = uri
+        self.uris = [uri] if uri else uris
         self.function = function
         if args:
             self.sequential, self.named = args
@@ -98,7 +98,14 @@ class Endpoint(object):
         else:
             # Nudge default renderer
             self.renderer = Json()
-        self.regex = re.compile(self.method + self.uri)
+        self.regexs = [re.compile(self.method + uri) for uri in self.uris]
+
+    def match(self, reqline):
+        for regex in self.regexs:
+            match = regex.match(reqline)
+            if match:
+                return match
+
 
     def __call__(self, *args, **kwargs):
         return self.function(*args, **kwargs)
@@ -289,7 +296,7 @@ class ServicePublisher(object):
             reqline = method + urllib.unquote(req.path)
             match = None
             for endpoint in self._endpoints:
-                match = endpoint.regex.match(reqline)
+                match = endpoint.match(reqline)
                 if match:
                     break
 
