@@ -94,7 +94,7 @@ class Arg(object):
 class CustomArg(Arg):
 
     def __init__(self, name=None):
-        if not name:
+        if not name and hasattr(self, '__name__'):
             name = dehump(self.__name__)
         self.name = name
         pass
