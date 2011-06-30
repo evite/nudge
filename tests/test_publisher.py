@@ -159,6 +159,49 @@ class HandlerTest(unittest.TestCase):
         result = sp(req, resp.start_response)
         resp.write(result)
         self.assertEqual(req._buffer,response_buf(200, '{"called": 1}'))
+
+    def test_multiuri_handler_noarg(self):
+        def handler(): return dict(called=1)
+
+        sp = ServicePublisher()
+        sp.add_endpoint(Endpoint(name='', method='GET', uris=['/location', '/otherlocation'], function=handler))
+        req = create_req('GET', '/location')
+        resp = MockResponse(req, 200)
+        result = sp(req, resp.start_response)
+        resp.write(result)
+        self.assertEqual(req._buffer,response_buf(200, '{"called": 1}'))
+
+        req = create_req('GET', '/otherlocation')
+        resp = MockResponse(req, 200)
+        result = sp(req, resp.start_response)
+        resp.write(result)
+        self.assertEqual(req._buffer,response_buf(200, '{"called": 1}'))
+        
+    def test_multiuri_handler_query_arg(self):
+        def handler(user): return dict(name=user)
+
+        sp = ServicePublisher()
+        sp.add_endpoint(Endpoint(
+            name='',
+            method='GET',
+            uris=[
+                '/(?P<user>.*)/profile',
+                '/profiles/(?P<user>.*)',
+            ],
+            args=([args.String('user')],{}),
+            function=handler
+        ))
+        req = create_req('GET', '/oneuser/profile')
+        resp = MockResponse(req, 200)
+        result = sp(req, resp.start_response)
+        resp.write(result)
+        self.assertEqual(req._buffer,response_buf(200, '{"name": "oneuser"}'))
+
+        req = create_req('GET', '/profiles/other_user')
+        resp = MockResponse(req, 200)
+        result = sp(req, resp.start_response)
+        resp.write(result)
+        self.assertEqual(req._buffer,response_buf(200, '{"name": "other_user"}'))
         
     def test_noargs_handlersuccess_empty(self):
         def handler(): return None
