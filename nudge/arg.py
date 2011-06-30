@@ -161,7 +161,9 @@ class ClientIp(CustomArg):
     
     def __init__(self):
         def func(req, inargs):
-            client_ip = req.headers.get("X-Forwarded-For", "") or req.remote_ip
+            client_ip = req.headers.get("X-Forwarded-For", "")\
+                or req.headers.get("x_forwarded_for", "")\
+                or req.remote_ip
             if client_ip:
                 # client, proxy1, proxy2, ...
                 client_ip = client_ip.partition(",")[0].strip()
