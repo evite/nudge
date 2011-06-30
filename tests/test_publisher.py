@@ -203,6 +203,22 @@ class HandlerTest(unittest.TestCase):
         result = sp(req, resp.start_response)
         resp.write(result)
         self.assertEqual(req._buffer,response_buf(200, '{"arg1": 1}'))
+
+    def test_arg_handlersuccess_nested_json(self):
+        def handler(*args, **kwargs): return dict(arg1=1)
+        sp = ServicePublisher()
+        sp.add_endpoint(Endpoint(name='', method='POST', uri='/location', args=([args.String('test')],{}), function=handler))
+        req = create_req(
+            'POST',
+            '/location',
+            arguments=dict(test="blah"),
+            headers={"Content-Type":"application/json"},
+            body='{"test":"foo", "spam":{"wonderful":true}}'
+        )
+        resp = MockResponse(req, 200)
+        result = sp(req, resp.start_response)
+        resp.write(result)
+        self.assertEqual(req._buffer,response_buf(200, '{"arg1": 1}'))
         
 
     def test_arg_handlersuccess_part_deux(self):
