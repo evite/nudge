@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-
+import inspect
 import logging
 import nudge.json
 
@@ -114,16 +114,26 @@ class JsonErrorHandler(object):
 
 def handle_exception(exp, exp_handlers):
     # Check if this endpoint can handle this exception
-    if exp_handlers and exp.__class__ in exp_handlers:
-        exp_handler = exp_handlers[exp.__class__]
-        if callable(exp_handler):
-            # TODO maybe give e the req and start response, maybe add
-            # a finished var to track if e handled everything
-            return exp_handler(exp)
-        else:
-            # Handle 'simple' tuple based exception handler (not callable)
-            return (exp_handler.code, exp_handler.content_type,
-                    exp_handler.content, exp_handler.headers)
+    if exp_handlers:
+        exps = inspect.getmro(exp.__class__)
+        exp_class = None
+
+        for clazz in exps:
+            if clazz in exp_handlers:
+                exp_class = clazz
+                break
+
+        if exp_class:
+            exp_handler = exp_handlers[exp_class]
+            if callable(exp_handler):
+                # TODO maybe give e the req and start response, maybe add
+                # a finished var to track if e handled everything
+                return exp_handler(exp)
+            else:
+                # Handle 'simple' tuple based exception handler (not callable)
+                return (exp_handler.code, exp_handler.content_type,
+                        exp_handler.content, exp_handler.headers)
+
     _log.exception("Unhandled exception class: %s", exp.__class__)
     raise exp
 

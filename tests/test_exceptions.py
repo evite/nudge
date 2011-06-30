@@ -212,6 +212,52 @@ class ExceptionTest(unittest.TestCase):
             content_type="text/plain",
         ))
 
+    def test_custom_exp_handler_precidence(self):
+        """ Test a custom exception handler without a callable. Map to our
+            endpoint, and do not use a default handler (will default to
+            JsonErrorHandler) """
+        class TestExpHandler(object):
+            code = 500
+            content_type = "text/plain"
+            content = "Default error message"
+            headers = {}
+
+        class SpecificExpHandler(object):
+            code = 502
+            content_type = "text/plain"
+            content = "Specific Error Message"
+            headers = {}
+
+        class SpecificException(Exception):
+            pass
+
+        class MoreSpecificException(SpecificException):
+            pass
+
+        def handler():
+            raise MoreSpecificException("New Message")
+        
+        sp = ServicePublisher()
+        sp.add_endpoint(Endpoint(
+            name='test', 
+            method='GET', 
+            uri='/location', 
+            function=handler,
+            exceptions={
+                Exception:TestExpHandler(),
+                SpecificException:SpecificExpHandler(),
+            }
+        ))
+        req = create_req('GET', '/location')
+        resp = MockResponse(req, 500)
+        result = sp(req, resp.start_response)
+        resp.write(result)
+        self.assertEqual(req._buffer, response_buf(
+            http_status=502,
+            content="Specific Error Message",
+            content_type="text/plain",
+        ))
+
     def test_custom_exp_handler(self):
         """ Test a custom exception handler without a callable. Map to our
             endpoint, and do not use a default handler (will default to
