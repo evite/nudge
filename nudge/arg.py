@@ -138,13 +138,34 @@ class List(Arg):
         )
 
 class Boolean(Arg):
-    validator = validate.Boolean()
+
+    def __init__(self, name, default=None, optional=False):
+        super(Boolean, self).__init__(
+            name, 
+            optional, 
+            default, 
+            validate.Boolean()
+        )
 
 class Date(Arg):
-    validator = validate.Date()
+
+    def __init__(self, name, default=None, optional=False):
+        super(Date, self).__init__(
+            name, 
+            optional, 
+            default, 
+            validate.Date()
+        )
 
 class Json(Arg):
-    validator = validate.Json()
+
+    def __init__(self, name, default=None, optional=False):
+        super(Json, self).__init__(
+            name, 
+            optional, 
+            default, 
+            validate.Json()
+        )
 
 class Integer(Arg): 
 

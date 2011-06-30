@@ -226,6 +226,12 @@ class ValidatorTest(unittest.TestCase):
         for input in inputs:
             b(input)
 
+    def test_boolean(self):
+        inputs = [False, True, 0, 1, 'true', 'false']
+        b = vals.Boolean()
+        for input in inputs:
+            b(input)
+
     @raises(vals.ValidationError)
     def test_boolean_fail(self):
         inputs = [{}, [], 20, datetime.datetime.now()]
@@ -466,6 +472,16 @@ class ArgTest(unittest.TestCase):
         req = create_json_post_req({"QUERY_STRING":"test=1"})
         i = args.String("test")
         self.assertEqual("1", i.argspec(req, None))
+
+    def test_bool_in_args(self):
+        req = create_json_post_req({"QUERY_STRING":"test=true"})
+        i = args.Boolean("test")
+        self.assertEqual(True, i.argspec(req, None))
+
+    def test_date_in_args(self):
+        req = create_json_post_req({"QUERY_STRING":"test=20110101"})
+        i = args.Date("test")
+        self.assertEqual(datetime.date(2011, 1, 1), i.argspec(req, None))
 
     def test_string_in_inargs(self):
         req = create_json_post_req({"headers":{"test":"something"}, "arguments":{},"body":'{}'})
