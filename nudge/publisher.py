@@ -113,6 +113,30 @@ class Endpoint(object):
 def _write(req, content):
     req._buffer += content
 
+
+class WSGIHeaders(dict):
+
+    def __init__(self, *args, **kwargs):
+        super(WSGIHeaders, self).__init__()
+        self.update(*args, **kwargs)
+
+    def __getitem__(self, key):
+        return super(WSGIHeaders, self).__getitem__(WSGIHeaders.normalize_name(key))
+
+    def __setitem__(self, key, value):
+        return super(WSGIHeaders, self).__setitem__(WSGIHeaders.normalize_name(key), value)
+
+    def get(self, key, default=None):
+        return super(WSGIHeaders, self).get(WSGIHeaders.normalize_name(key), default)
+
+    def set(self, key, value):
+        return super(WSGIHeaders, self).set(WSGIHeaders.normalize_name(key), value)
+    
+    @staticmethod
+    def normalize_name(n):
+        return n.lower().replace('-','_')
+
+
 class WSGIRequest(object):
 
     def __init__(self, req_dict):
@@ -137,8 +161,9 @@ class WSGIRequest(object):
 
     @lazyprop
     def headers(self):
-        _headers = {}
+        _headers = WSGIHeaders()
         for k,v in self.req.iteritems():
+            print k, v
             if k.startswith('HTTP_'):
                 _headers[k.replace('HTTP_', '').lower()] = v
             elif k == 'CONTENT_TYPE':
