@@ -163,7 +163,6 @@ class WSGIRequest(object):
     def headers(self):
         _headers = WSGIHeaders()
         for k,v in self.req.iteritems():
-            print k, v
             if k.startswith('HTTP_'):
                 _headers[k.replace('HTTP_', '').lower()] = v
             elif k == 'CONTENT_TYPE':
