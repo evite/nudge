@@ -29,10 +29,13 @@ import nudge.publisher as servicepublisher
 from nudge.publisher import WSGIRequest
 import nudge.validator as vals
 
+# Unicode code point for the greek uppercase delta
+DELTA = u'\u0394'
+
 class ValidatorTest(unittest.TestCase):
 
     def test_string(self):
-        inputs = [u'weeweeeeeee', "woot"]
+        inputs = [u'weeweeeeeee', "woot", DELTA + DELTA]
         s = vals.String()
         for input in inputs:
             self.assertEqual(input, s(input))
@@ -144,7 +147,6 @@ class ValidatorTest(unittest.TestCase):
         for input in inputs:
             i(input)
 
-
     def test_float(self):
         inputs = [1, 30, 30.09, "30.45"]
         f = vals.Float()
@@ -207,7 +209,7 @@ class ValidatorTest(unittest.TestCase):
 
     def test_string_alts(self):
         inputs = ['yay', 'boo', 'foo', 'jeebus']
-        alts = ['yay', 'yay', 'boo', 'foo', 'jeebus']
+        alts = ['yay', 'yay', 'boo', 'foo', 'jeebus', DELTA]
         a = vals.StringAlternatives(alts)
         for input in inputs:
             a(input)
@@ -220,17 +222,25 @@ class ValidatorTest(unittest.TestCase):
         for input in inputs:
             a(input)
 
-    def test_boolean(self):
-        inputs = [False, True, 0, 1, 'true', 'false']
-        b = vals.Boolean()
-        for input in inputs:
-            b(input)
+    _BOOL_TESTS = (
+        (False, False),
+        ('false', False),
+        ('fAlSe', False),
+        (0, False),
+        ('0', False),
+        ('off', False),
 
+        (True, True),
+        ('true', True),
+        ('tRuE', True),
+        (1, True),
+        ('1', True),
+        ('on', True),
+    )
     def test_boolean(self):
-        inputs = [False, True, 0, 1, 'true', 'false']
         b = vals.Boolean()
-        for input in inputs:
-            b(input)
+        for input, truth in self._BOOL_TESTS:
+            assert b(input) is truth, "%s was not %s" % (input, truth)
 
     @raises(vals.ValidationError)
     def test_boolean_fail(self):
@@ -379,7 +389,7 @@ def create_json_post_req(environ):
     return create_req(environ)
 
 class ArgTest(unittest.TestCase):
-    
+
     def test_get_json_body(self):
         req = create_req({"body":'{"woot":"bar"}', "REQUEST_METHOD":"POST"})
         body = args._get_json_body(req)
