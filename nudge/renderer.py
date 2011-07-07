@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-
 import base64
+import types
 from cStringIO import StringIO
 from nudge.json import json_encode
 from nudge.error import HTTPException
@@ -50,9 +50,14 @@ class Json(object):
     """ Default Nudge HTTP Content Type. Encodes the entire endpoint
         result as json, and returns """
 
+    class SecurityException(Exception):
+        pass
+
     def __call__(self, result):
         if result == None:
             raise HTTPException(404)
+        if isinstance(result, (types.ListType, types.TupleType)):
+            raise Json.SecurityException("Results that encode as json arrays are not allowed for security concerns")
         return Result(
             content=json_encode(result),
             content_type='application/json; charset=UTF-8',
