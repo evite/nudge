@@ -24,24 +24,24 @@ import nudge.json
 import datetime
 
 __all__ = [
-    'ValidationError', 
+    'ValidationError',
     'DateTime',
-    'Date', 
+    'Date',
     'String',
     'NotEmpty',
-    'Int', 
-    'Float', 
+    'Int',
+    'Float',
     'StringAlternatives',
-    'Boolean', 
-    'Json', 
-    'List', 
-    'Dict', 
+    'Boolean',
+    'Json',
+    'List',
+    'Dict',
 ]
 
 class ValidationError(BaseException):
     def __init__(self, message=None):
         self.message = message
-        
+
 def DateTime():
     date_re = re.compile(r'^\d{8}T\d{6}')
     def f(s):
@@ -56,18 +56,18 @@ def Date():
 
     date_re = re.compile(r'(\d{4})(\d{2})(\d{2})')
     def f(s):
-        
+
         try:
             year, month, day = [ int(i) for i in date_re.match(s).groups()[0:3]]
             return datetime.date(year, month, day)
 
-        except (ValueError, AttributeError), e: 
+        except (ValueError, AttributeError), e:
             raise ValidationError("malformed, use eg. '20100527'")
-        
+
     return f
 
 def String():
-    def f(s): 
+    def f(s):
         if isinstance(s, (types.UnicodeType, types.StringType)):
             return s
         raise ValidationError("invalid: not a string")
@@ -90,7 +90,7 @@ def Int(min_=None, max_=None):
             raise ValidationError("must be >= %d" % min_)
         if (max_ and i > max_):
             raise ValidationError("must be <= %d" % max_)
-            
+
         return i
     return f
 
@@ -130,28 +130,30 @@ def Float(min_=None, max_=None):
             raise ValidationError("must be >= %d" % min_)
         if (max_ and v > max_):
             raise ValidationError("must be <= %d" % max_)
-            
+
         return v
     return f
 
 def StringAlternatives(alt_list):
-    alt_set = set([str(a) for a in alt_list])
+    for s in alt_list: # Just want to make sure they are strings
+        assert isinstance(s, basestring)
+    alt_set = set(alt_list)
     def f(s):
         if not s in alt_set:
             raise ValidationError("must be one of: %s" % (', '.join(alt_set)))
-            
+
         return s
     return f
 
 def Boolean():
     def f(s):
-        s = str(s).lower().strip()
-        if s in [ '1', 'true']:
+        if isinstance(s, basestring):
+            s = s.lower().strip()
+        if s in [ '1', 1, 'on', 'true', True]:
             return True
-        elif s in ['0', 'false']:
+        elif s in ['0', 0, 'off', 'false', False]:
             return False
-
-        raise ValidationError("must be one of 0, 1, true or false")
+        raise ValidationError("must be one of 0, 1, on, off, true or false")
     return f
 
 def Json():
