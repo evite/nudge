@@ -27,6 +27,7 @@ import nudge.validator
 import nudge.arg as args
 import nudge.json as json
 import nudge.publisher as sp
+from nudge.renderer import Json
 
 import httplib
 from nudge.publisher import ServicePublisher, Endpoint, Args, WSGIRequest
@@ -284,6 +285,26 @@ class HandlerTest(unittest.TestCase):
         result = sp(req, resp.start_response)
         resp.write(result)
         self.assertEqual(req._buffer,response_buf(400, '{"message": "body is not JSON", "code": 400}'))
+    
+    def test_prevent_json_array(self):
+        def handler():
+            return [1,2,3]
+
+        sp = ServicePublisher()
+        sp.add_endpoint(Endpoint(
+            name='',
+            method='POST',
+            uri='/location',
+            function=handler
+        ))
+        req = create_req(
+            'POST',
+            '/location',
+        )
+        resp = MockResponse(req, 200)
+        result = sp(req, resp.start_response)
+        resp.write(result)
+        self.assertEqual(req._buffer,response_buf(500, '{"message": "Internal Server Error", "code": 500}'))
 
 
 class RendererTest(unittest.TestCase):
