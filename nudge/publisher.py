@@ -60,7 +60,7 @@ class Endpoint(object):
     sequential = []
     named = {}
 
-    def __init__(self, name=None, method=None, uri=None, uris=None, function=None, 
+    def __init__(self, name=None, method=None, uri=None, uris=None, function=None,
                  args=None, exceptions=None, renderer=None):
         # Someday support unicode here, for now only bytestrings.
         assert isinstance(name, str)
@@ -131,7 +131,7 @@ class WSGIHeaders(dict):
 
     def set(self, key, value):
         return super(WSGIHeaders, self).set(WSGIHeaders.normalize_name(key), value)
-    
+
     @staticmethod
     def normalize_name(n):
         return n.lower().replace('-','_')
@@ -146,7 +146,7 @@ class WSGIRequest(object):
         self.remote_ip = self.req['REMOTE_ADDR']
         self.body = self.req['wsgi.input'].read()
         self._buffer = ''
-    
+
     @lazyprop
     def path(self):
         return self.req['PATH_INFO']
@@ -154,8 +154,8 @@ class WSGIRequest(object):
     @lazyprop
     def uri(self):
         return '%s://%s%s' % (
-                self.req['wsgi.url_scheme'], 
-                self.req['HTTP_HOST'], 
+                self.req['wsgi.url_scheme'],
+                self.req['HTTP_HOST'],
                 self.req['PATH_INFO']
             )
 
@@ -173,27 +173,35 @@ class WSGIRequest(object):
     def arguments(self):
         _arguments = {}
         try:
-            tmp = self.req.get('QUERY_STRING', '').split('&')
-            tmp = [a.split('=') for a in tmp]
-            tmp = filter(lambda x: len(x) == 2, tmp)
-            for a in tmp:
-                if a[0] in _arguments:
-                    _arguments[a[0]].append(a[1])
-                else:
-                    _arguments[a[0]] = [a[1]]
+            # First url decode
+            tmp = self.req.get('QUERY_STRING', '')
+            if tmp:
+                # First url unescape and make unicode. Consider making the
+                # unicode decoding type a Nudge option.
+                tmp = unicode(urllib.unquote_plus(tmp), encoding="utf-8")
+                tmp = tmp.split('&')
+                tmp = [a.split('=') for a in tmp]
+                # Only keep args with k and v. f= will stay and be [u'f', u'']
+                tmp = filter(lambda x: len(x) == 2, tmp)
+                for a in tmp:
+                    if a[0] in _arguments:
+                        _arguments[a[0]].append(a[1])
+                    else:
+                        _arguments[a[0]] = [a[1]]
         except (Exception), e:
+            _log.exception(e)
             _log.error(
-                'problem making arguments out of QUERY_STRING: %s', 
+                'problem making arguments out of QUERY_STRING: %s',
                 self.req['QUERY_STRING']
             )
 
-        # add any arguments from JSON body
         if self.method in ('POST', 'PUT') and self.body:
             content_type = self.headers.get("Content-Type", '')
-            # add form args
+            # TODO make sure these come out as unicode
             if content_type.startswith("application/x-www-form-urlencoded"):
                 for name, values in cgi.parse_qs(self.body).iteritems():
                     _arguments.setdefault(name, []).extend(values)
+            # add any arguments from JSON body
             elif content_type.startswith("application/json"):
                 try:
                     body = nudge.json.json_decode(self.body)
@@ -202,7 +210,6 @@ class WSGIRequest(object):
 
                 except (ValueError):
                     raise HTTPException(400, "body is not JSON")
-
         return _arguments
 
     def write(self, content):
@@ -254,7 +261,7 @@ class ServicePublisher(object):
             assert isinstance(options, dict), "options must be of type dict"
             self._options.update(options)
         self.verify_options()
-            
+
     def verify_options(self):
         msg = "Default exception handler "
         assert self._options.default_error_handler, msg + "must exist"
@@ -293,7 +300,7 @@ class ServicePublisher(object):
         args = req.QUERY_STRING.split('=')
 
     def __call__(self, environ, start_response):
-        """ 
+        """
             This is called by each request to the server.
             This MUST return a valid HTTP response under all circumstances.
         """
@@ -353,13 +360,13 @@ class ServicePublisher(object):
                 r = arg.argspec(req, inargs)
                 if r != None:
                     kwargs[argname] = r
-                        
+
             # invoke the service endpoint
             result = endpoint(*args, **kwargs)
 
             # TODO make sure this works with unicode
             _log.debug(_gen_trace_str(endpoint.function, args, kwargs, result))
-            
+
             r = endpoint.renderer(result)
             content, content_type, code, extra_headers = \
                 r.content, r.content_type, r.http_status, r.headers
@@ -369,7 +376,7 @@ class ServicePublisher(object):
             #
             # Try to use this endpoint's exception handler(s)
             # If the raised exception is not mapped in this endpoint, or
-            # this endpoint raises an exception when trying to handle, 
+            # this endpoint raises an exception when trying to handle,
             # we will then try to the default handler, and ultimately
             # fallback to the self._options.default_error_response, which
             # is guaranteed to be valid at app initialization.
@@ -393,11 +400,11 @@ class ServicePublisher(object):
                 error_response or self._options.default_error_response
 
         final_content = _finish_request(
-            req, 
-            start_response, 
-            code, 
-            content_type, 
-            content, 
+            req,
+            start_response,
+            code,
+            content_type,
+            content,
             extra_headers
         )
 
@@ -425,7 +432,7 @@ def _finish_request(req, start_response, code, content_type, content, headers):
         code = DEFAULT_ERROR_CODE
 
     start_response(
-        str(code) + ' ' + responses[code], 
+        str(code) + ' ' + responses[code],
         final_headers
     )
     return content
@@ -464,21 +471,21 @@ def serve(service_description, args=None):
     parser.add_option(
         "-p", "--port", dest="port", help="port to run on", default=8080)
     parser.add_option(
-        "-s", "--server", dest="server", 
+        "-s", "--server", dest="server",
         help="which http server to use", default="eventlet")
     # parser.add_option(
-        # "-t", "--threaded", dest="threaded", 
+        # "-t", "--threaded", dest="threaded",
         # help="run as a threaded server (paste)", default=False)
     parser.add_option(
-        "-n", "--threads", dest="threads", 
-        help="number of worker threads (only honored if --threaded)", 
+        "-n", "--threads", dest="threads",
+        help="number of worker threads (only honored if --threaded)",
         default=15)
     parser.add_option(
-        "-b", "--backlog", dest="backlog", 
-        help="maximum number of queued connections (only used if --threaded)", 
+        "-b", "--backlog", dest="backlog",
+        help="maximum number of queued connections (only used if --threaded)",
         default=5)
     parser.add_option(
-        "-d", "--debug", action="store_true", dest="debug", 
+        "-d", "--debug", action="store_true", dest="debug",
         help="setup nudge in debug mode (extra color logging)", default=False)
 
     (options, args) = parser.parse_args(args)
@@ -499,7 +506,7 @@ def serve(service_description, args=None):
         threads = int(options.threads)
         backlog = int(options.backlog)
         paste.httpserver.serve(
-            sp, host=None, port=port, use_threadpool=True, 
+            sp, host=None, port=port, use_threadpool=True,
             threadpool_workers=threads, threadpool_options=None,
             request_queue_size=backlog
         )
