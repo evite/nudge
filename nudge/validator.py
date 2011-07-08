@@ -149,9 +149,9 @@ def Boolean():
     def f(s):
         if isinstance(s, basestring):
             s = s.lower().strip()
-        if s in [ '1', 1, 'on', 'true', True]:
+        if s in [ '1', 1, 'on', 'true', 't', True]:
             return True
-        elif s in ['0', 0, 'off', 'false', False]:
+        elif s in ['0', 0, 'off', 'false', 'f', False]:
             return False
         raise ValidationError("must be one of 0, 1, on, off, true or false")
     return f
