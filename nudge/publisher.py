@@ -60,13 +60,16 @@ class Endpoint(object):
     sequential = []
     named = {}
 
-    def __init__(self, name=None, method=None, uri=None, uris=None, function=None,
-                 args=None, exceptions=None, renderer=None):
+    def __init__(self, name=None, method=None, uri=None, uris=None, 
+                 function=None, args=None, exceptions=None, renderer=None):
         # Someday support unicode here, for now only bytestrings.
         assert isinstance(name, str)
         assert isinstance(method, str)
-        assert (not uris and isinstance(uri, str)) or (not uri and isinstance(uris, types.ListType)), "Endpoints must have either a uri or uris, but not both"
-        assert callable(function) or isinstance(function, str), "function must be callable or a string, but was %s" % type(function)
+        assert (not uris and isinstance(uri, str)) or \
+            (not uri and isinstance(uris, types.ListType)), \
+            "Endpoints must have either a uri or uris, but not both"
+        assert callable(function) or isinstance(function, str), \
+            "function must be callable or a string, but was %s" % type(function)
 
         assert not exceptions or isinstance(exceptions, dict), \
             "exceptions must be a dict, but was type %s" % type(exceptions)
@@ -121,16 +124,24 @@ class WSGIHeaders(dict):
         self.update(*args, **kwargs)
 
     def __getitem__(self, key):
-        return super(WSGIHeaders, self).__getitem__(WSGIHeaders.normalize_name(key))
+        return super(WSGIHeaders, self).__getitem__(
+            WSGIHeaders.normalize_name(key)
+        )
 
     def __setitem__(self, key, value):
-        return super(WSGIHeaders, self).__setitem__(WSGIHeaders.normalize_name(key), value)
+        return super(WSGIHeaders, self).__setitem__(
+            WSGIHeaders.normalize_name(key), value
+        )
 
     def get(self, key, default=None):
-        return super(WSGIHeaders, self).get(WSGIHeaders.normalize_name(key), default)
+        return super(WSGIHeaders, self).get(
+            WSGIHeaders.normalize_name(key), default
+        )
 
     def set(self, key, value):
-        return super(WSGIHeaders, self).set(WSGIHeaders.normalize_name(key), value)
+        return super(WSGIHeaders, self).set(
+            WSGIHeaders.normalize_name(key), value
+        )
 
     @staticmethod
     def normalize_name(n):
@@ -189,9 +200,8 @@ class WSGIRequest(object):
                     else:
                         _arguments[a[0]] = [a[1]]
         except (Exception), e:
-            _log.exception(e)
-            _log.error(
-                'problem making arguments out of QUERY_STRING: %s',
+            _log.exception(
+                "problem making arguments out of QUERY_STRING: %s",
                 self.req['QUERY_STRING']
             )
 
@@ -346,7 +356,8 @@ class ServicePublisher(object):
 
             # convert all values in req.arguments from lists to scalars,
             # then combine with path args.
-            arguments = dict((k, v[0]) for k, v in req.arguments.iteritems() if isinstance(v, list))
+            arguments = dict((k, v[0]) for k, v in req.arguments.iteritems()\
+                if isinstance(v, list))
             inargs = dict(match.groupdict(), **arguments)
 
             # compile positional arguments
@@ -373,6 +384,7 @@ class ServicePublisher(object):
 
         except (Exception), e:
             error_response = None
+            logged_trace = False
             #
             # Try to use this endpoint's exception handler(s)
             # If the raised exception is not mapped in this endpoint, or
@@ -386,15 +398,20 @@ class ServicePublisher(object):
                     error_response = handle_exception(e, endpoint.exceptions)
                 except (Exception), e:
                     # TODO this may log too loudly
-                    _log.exception("Endpoint failed to handle exception")
+                    _log.exception(
+                        "Endpoint %s failed to handle exception" % endpoint.name
+                    )
+                    logged_trace = True
 
             if not error_response:
                 try:
                     # Try one more time to handle a base exception
                     error_response = self._options.default_error_handler(e)
                 except (Exception), e:
-                    _log.exception(
+                    _log.error(
                         "Default error handler failed to handle exception")
+                    if logged_trace is False:
+                        _log.exception(e)
 
             code, content_type, content, extra_headers = \
                 error_response or self._options.default_error_response
