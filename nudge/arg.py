@@ -275,10 +275,7 @@ def _get_json_body(req):
     if '_body_dict' in req.arguments:
         return req.arguments['_body_dict']
 
-    if not req.body or \
-        not req.headers.get(
-            "Content-Type", 
-            '').startswith("application/json"):
+    if not req.body:
         return None
 
     try:
