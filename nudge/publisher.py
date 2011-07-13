@@ -25,6 +25,7 @@ import time
 import types
 import urllib
 import warnings
+import cStringIO as StringIO
 
 import nudge.json
 import nudge.log
@@ -211,6 +212,20 @@ class WSGIRequest(object):
             if content_type.startswith("application/x-www-form-urlencoded"):
                 for name, values in cgi.parse_qs(self.body).iteritems():
                     _arguments.setdefault(name, []).extend(values)
+            # multipart form
+            elif content_type.startswith("multipart/form-data"):
+                try:
+                    fs = cgi.FieldStorage(
+                        fp=StringIO.StringIO(self.body),
+                        environ=self.req,
+                        keep_blank_values=1
+                    )
+                    for k in fs.keys():
+                        _arguments[k] = fs[k].value
+                except:
+                    _log.exception(
+                        "problem parsing multipart/form-data"
+                    )
             # add any arguments from JSON body
             elif content_type.startswith("application/json"):
                 try:
