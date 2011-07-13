@@ -357,7 +357,7 @@ class ServicePublisher(object):
             # convert all values in req.arguments from lists to scalars,
             # then combine with path args.
             arguments = dict((k, v[0]) for k, v in req.arguments.iteritems()\
-                if isinstance(v, list))
+                if isinstance(v, list) and len(v) > 0)
             inargs = dict(match.groupdict(), **arguments)
 
             # compile positional arguments
