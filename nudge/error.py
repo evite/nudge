@@ -129,7 +129,14 @@ def handle_exception(exp, exp_handlers):
 
         if exp_class:
             exp_handler = exp_handlers[exp_class]
-            if callable(exp_handler):
+            # todo: don't hardcode the jsonerror handler
+            if isinstance(exp_handler, int):
+                handler = JsonErrorHandler()
+                handler.code = exp_handler
+                # replacing the handler so we only have to create the instance the first time
+                exp_handlers[exp_class] = handler
+                return handler(exp)
+            elif callable(exp_handler):
                 # TODO maybe give e the req and start response, maybe add
                 # a finished var to track if e handled everything
                 return exp_handler(exp)
