@@ -23,6 +23,7 @@ from nudge.error import HTTPException, SecurityException
 
 __all__ = [
     'Result', 
+    'RequestAwareRenderer', 
     'Json', 
     'InsecureJson', 
     'Redirect',

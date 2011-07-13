@@ -394,7 +394,7 @@ class ServicePublisher(object):
             _log.debug(_gen_trace_str(endpoint.function, args, kwargs, result))
 
             if isinstance(endpoint.renderer, RequestAwareRenderer):
-                r = endpoint.transformer(req, result)
+                r = endpoint.renderer(req, result)
             else:
                 r = endpoint.renderer(result)
             content, content_type, code, extra_headers = \
