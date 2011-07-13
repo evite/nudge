@@ -46,6 +46,12 @@ class Result(object):
             headers = {}
         self.headers = headers
 
+class RequestAwareRenderer(object):
+
+    def __call__(self, req, result):
+        pass
+
+
 class Json(object):
     ''' Default Nudge HTTP Content Type. Encodes the entire endpoint
         result as json, and returns. 

@@ -30,7 +30,7 @@ import cStringIO as StringIO
 import nudge.json
 import nudge.log
 import nudge.arg as args
-from nudge.renderer import Json
+from nudge.renderer import Json, RequestAwareRenderer
 from nudge.validator import ValidationError
 from nudge.json import Dictomatic
 from nudge.error import handle_exception, HTTPException, JsonErrorHandler,\
@@ -393,7 +393,10 @@ class ServicePublisher(object):
             # TODO make sure this works with unicode
             _log.debug(_gen_trace_str(endpoint.function, args, kwargs, result))
 
-            r = endpoint.renderer(result)
+            if isinstance(endpoint.renderer, RequestAwareRenderer):
+                r = endpoint.transformer(req, result)
+            else:
+                r = endpoint.renderer(result)
             content, content_type, code, extra_headers = \
                 r.content, r.content_type, r.http_status, r.headers
 
