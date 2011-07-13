@@ -22,10 +22,14 @@ import nudge.json
 _log = logging.getLogger("nudge.error")
 
 __all__ = [
+    'DEFAULT_ERROR_CODE',
+    'DEFAULT_ERROR_CONTENT_TYPE',
+    'DEFAULT_ERROR_CONTENT',
     'responses',
-    'HTTPException',
     'JsonErrorHandler',
     'handle_exception',
+    'HTTPException',
+    'SecurityException',
 ]
 DEFAULT_ERROR_CODE = 500
 DEFAULT_ERROR_CONTENT_TYPE = "application/json; charset=UTF-8"
@@ -142,4 +146,7 @@ class HTTPException(Exception):
     def __init__(self, status_code, message=None):
         self.status_code = status_code
         self.message = message
+
+class SecurityException(Exception):
+    pass
 

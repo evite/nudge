@@ -19,12 +19,12 @@ import base64
 import types
 from cStringIO import StringIO
 from nudge.json import json_encode
-from nudge.error import HTTPException
+from nudge.error import HTTPException, SecurityException
 
 __all__ = [
-    'ExceptionRenderer',
     'Result', 
     'Json', 
+    'InsecureJson', 
     'Redirect',
     'CSS',
     'Img',
@@ -47,17 +47,33 @@ class Result(object):
         self.headers = headers
 
 class Json(object):
-    """ Default Nudge HTTP Content Type. Encodes the entire endpoint
-        result as json, and returns """
-
-    class SecurityException(Exception):
-        pass
-
+    ''' Default Nudge HTTP Content Type. Encodes the entire endpoint
+        result as json, and returns. 
+        
+        Note this renderer will not allow you to pass back a top level
+        list or tuple (javascript array) because it is insecure, and could
+        allow a CSRF attack. See here:
+        http://flask.pocoo.org/docs/security/#json-security    
+    '''
     def __call__(self, result):
         if result == None:
             raise HTTPException(404)
         if isinstance(result, (types.ListType, types.TupleType)):
-            raise Json.SecurityException("Results that encode as json arrays are not allowed for security concerns")
+            raise SecurityException(
+                'Results that encode as json arrays are not '+\
+                'allowed for security concerns'
+            )
+        return Result(
+            content=json_encode(result),
+            content_type='application/json; charset=UTF-8',
+            http_status=200,
+        )
+
+class InsecureJson(object):
+    ''' See the notes above for Json. This does not check returned types. '''
+    def __call__(self, result):
+        if result == None:
+            raise HTTPException(404)
         return Result(
             content=json_encode(result),
             content_type='application/json; charset=UTF-8',
