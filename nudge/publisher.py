@@ -266,7 +266,7 @@ def redirect(uri, headers=None):
 class ServicePublisher(object):
 
     def __init__(self, fallbackapp=None, endpoints=None, \
-                 debug=False, options=None):
+                 debug=False, options=None, default_error_handler=None):
         self._debug = debug
         if self._debug:
             _log.setLevel(logging.DEBUG)
@@ -278,8 +278,10 @@ class ServicePublisher(object):
         # TODO Fix fallback app here and below
         self._fallbackapp = fallbackapp
 
+        if not default_error_handler:
+            default_error_handler = JsonErrorHandler()
         self._options = Dictomatic({
-            "default_error_handler": JsonErrorHandler(),
+            "default_error_handler": default_error_handler,
         })
 
         if options:
@@ -413,7 +415,7 @@ class ServicePublisher(object):
             #
             if endpoint and endpoint.exceptions:
                 try:
-                    error_response = handle_exception(e, endpoint.exceptions)
+                    error_response = handle_exception(e, endpoint.exceptions, default_handler=self._options.default_error_handler)
                 except (Exception), e:
                     # TODO this may log too loudly
                     _log.exception(

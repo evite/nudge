@@ -116,7 +116,7 @@ class JsonErrorHandler(object):
         return code, self.content_type, \
             nudge.json.json_encode(content), self.headers
 
-def handle_exception(exp, exp_handlers):
+def handle_exception(exp, exp_handlers, default_handler=None):
     # Check if this endpoint can handle this exception
     if exp_handlers:
         exps = inspect.getmro(exp.__class__)
@@ -131,7 +131,7 @@ def handle_exception(exp, exp_handlers):
             exp_handler = exp_handlers[exp_class]
             # todo: don't hardcode the jsonerror handler
             if isinstance(exp_handler, int):
-                handler = JsonErrorHandler()
+                handler = default_handler or JsonErrorHandler()
                 handler.code = exp_handler
                 # replacing the handler so we only have to create the instance the first time
                 exp_handlers[exp_class] = handler
