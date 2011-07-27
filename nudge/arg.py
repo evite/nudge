@@ -63,10 +63,8 @@ class Arg(object):
                 data = inargs[self.name]
             # Default assumes optional=True
             if not data:
-                if self.default:
+                if self.optional:
                     return self.default
-                elif self.optional:
-                    return None
                 elif exists:
                     msg = " is required, exists, but is empty"
                 else:

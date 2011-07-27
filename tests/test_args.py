@@ -492,6 +492,11 @@ class ArgTest(unittest.TestCase):
         i = args.Boolean("test")
         self.assertEqual(True, i.argspec(req, None))
 
+    def test_bool_in_args_default_false(self):
+        req = create_json_post_req({"QUERY_STRING":""})
+        i = args.Boolean("test", default=False, optional=True)
+        self.assertEqual(False, i.argspec(req, None))
+
     def test_date_in_args(self):
         req = create_json_post_req({"QUERY_STRING":"test=20110101"})
         i = args.Date("test")
@@ -534,6 +539,11 @@ class ArgTest(unittest.TestCase):
         req = create_json_post_req({"headers":{"test":"something"}, "arguments":{},"body":'{"test":1}'})
         i = args.Integer("test")
         self.assertEqual(1, i.argspec(req, None))
+
+    def test_integer_optional_true_default_zero(self):
+        req = create_req({"headers":{"test": "something"}, "arguments": {}, "body": '{}'})
+        i = args.Integer("test", default=0, optional=True)
+        self.assertEqual(0, i.argspec(req, None))
 
     @raises(servicepublisher.HTTPException)
     def test_integer_fail(self):
