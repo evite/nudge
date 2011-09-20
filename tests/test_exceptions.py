@@ -163,7 +163,7 @@ class ExceptionTest(unittest.TestCase):
             raise Exception(500)
         
         sp = ServicePublisher(
-                options={"default_error_handler": TestExpHandler()})
+                options={"default_error_handler": TestExpHandler})
         sp.add_endpoint(Endpoint(
             name='test', 
             method='GET', 
@@ -195,7 +195,7 @@ class ExceptionTest(unittest.TestCase):
             raise Exception("New Message")
         
         sp = ServicePublisher(
-                options={"default_error_handler": TestExpHandler()})
+                options={"default_error_handler": TestExpHandler})
         sp.add_endpoint(Endpoint(
             name='test', 
             method='GET', 
@@ -356,6 +356,71 @@ class ExceptionTest(unittest.TestCase):
         self.assertEqual(req._buffer, response_buf(
             http_status=500,
             content='{"message": "%s", "code": 500}' % (responses[500]),
+        ))
+
+    def test_custom_default_exp_handler(self):
+        class VerboseJsonException(object):
+            content_type = "application/json; charset=UTF-8"
+            content = "Unknown Error"
+            headers = {}
+            code = 500
+
+            def __init__(self, code=None):
+                if code:
+                    self.code = code 
+
+            def __call__(self, exception):
+                resp = exception.__dict__
+                code = self.code
+                if hasattr(exception, 'status_code'):
+                    code = exception.status_code
+                resp['code'] = code
+                if hasattr(exception, 'message'):
+                    resp['message'] = exception.message
+                if not resp.get('message'):
+                    _log.debug("Exception: {0}".format(exception))
+                    resp['message'] = str(exception)
+                return (
+                    code,
+                    self.content_type,
+                    nudge.json.json_encode(resp),
+                    {},
+                )
+
+        def handler():
+            raise Exception("New Message")
+        
+        sp = ServicePublisher(debug=True, endpoints=[
+            Endpoint(
+            name='test', 
+            method='GET', 
+            uri='/location503', 
+            function=handler,
+            exceptions={Exception:503}),
+            Endpoint(
+            name='test', 
+            method='GET', 
+            uri='/location500', 
+            function=handler,
+        )],
+        default_error_handler=VerboseJsonException)
+
+        req = create_req('GET', '/location503')
+        resp = MockResponse(req, 503)
+        result = sp(req, resp.start_response)
+        resp.write(result)
+        self.assertEqual(req._buffer, response_buf(
+            http_status=503,
+            content='{"message": "New Message", "code": 503}',
+        ))
+
+        req = create_req('GET', '/location500')
+        resp = MockResponse(req, 500)
+        result = sp(req, resp.start_response)
+        resp.write(result)
+        self.assertEqual(req._buffer, response_buf(
+            http_status=500,
+            content='{"message": "New Message", "code": 500}',
         ))
 
 if __name__ == '__main__':

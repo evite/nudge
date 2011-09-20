@@ -131,7 +131,7 @@ def handle_exception(exp, exp_handlers, default_handler=None):
             exp_handler = exp_handlers[exp_class]
             # todo: don't hardcode the jsonerror handler
             if isinstance(exp_handler, int):
-                handler = default_handler or JsonErrorHandler()
+                handler = default_handler and default_handler() or JsonErrorHandler()
                 handler.code = exp_handler
                 # replacing the handler so we only have to create the instance the first time
                 exp_handlers[exp_class] = handler

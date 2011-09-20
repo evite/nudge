@@ -279,7 +279,7 @@ class ServicePublisher(object):
         self._fallbackapp = fallbackapp
 
         if not default_error_handler:
-            default_error_handler = JsonErrorHandler()
+            default_error_handler = JsonErrorHandler
         self._options = Dictomatic({
             "default_error_handler": default_error_handler,
         })
@@ -426,7 +426,8 @@ class ServicePublisher(object):
             if not error_response:
                 try:
                     # Try one more time to handle a base exception
-                    error_response = self._options.default_error_handler(e)
+                    handler = self._options.default_error_handler()
+                    error_response = handler(e)
                 except (Exception), e:
                     _log.error(
                         "Default error handler failed to handle exception")
