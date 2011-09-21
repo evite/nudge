@@ -40,18 +40,26 @@ class JsonTest(unittest.TestCase):
         data = '{"test":2,"blah":"woot","things":[12,123,1234]}'
         result = json.Dictomatic.wrap(data)
         self.assertEqual({"test":2,"blah":"woot","things":[12,123,1234]}, result)
-        
+
     def test_dictomatic_from_string_with_subdict(self):
         data = '{"test":2,"blah":"woot","things":[12,123,1234],"this":{"me":"my"}}'
         result = json.Dictomatic.wrap(data)
         self.assertEqual({"test":2,"blah":"woot","things":[12,123,1234],"this":{"me":"my"}}, result)
-        
+
+    def test_dictomatic_from_string_with_sublistdict(self):
+        data = '{"test":2,"blah":"woot","things":[{"yo":"mans"}],"this":{"me":"my"}}'
+        result = json.Dictomatic.wrap(data)
+        self.assertEqual({"test":2,"blah":"woot","things":[{"yo":"mans"}],"this":{"me":"my"}}, result)
+
+    # We removed this functionality as the caller of Dictomatic should use
+    # a list comprehension for this sort of thing.
+    @raises(ValueError)
     def test_dictomatic_from_string_list(self):
         data = '[{"test":2,"blah":"woot","things":[12,123,1234]}, {"test":2,"blah":"woot","things":[12,123,1234]}]'
         results = json.Dictomatic.wrap(data)
         for result in results:
             self.assertEqual({"test":2,"blah":"woot","things":[12,123,1234]}, result)
-        
+
     def test_dictomatic_from_dict(self):
         data = {"test":2,"blah":"woot","things":[12,123,1234]}
         result = json.Dictomatic.wrap(data)
@@ -78,7 +86,7 @@ class JsonTest(unittest.TestCase):
         print "data.ctime", data.ctime()
         print "json_encode data", json.json_encode(data)
         self.assertEqual('"'+data.ctime()+'"', json.json_encode(data))
-        
+
     def test_encode_normal(self):
         class Foo(json.JsonSerializable):
             __dict__ = {"test":1}
@@ -99,7 +107,7 @@ class JsonTest(unittest.TestCase):
             def __repr__(self):
                 return '{"test":1}'
         json.json_encode(Foo())
-        
+
     def test_gets(self):
         data = '{"test_that":3, "testThis":2,"blah":"woot","things":[12,123,1234],"this":{"me":"my"}}'
         result = json.Dictomatic.wrap(data)

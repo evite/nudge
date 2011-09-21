@@ -97,36 +97,49 @@ def hump(match):
 
 
 class Dictomatic(dict):
-    #TODO make sure sub-properties that are dictionaries are dictomatics too
 
     @classmethod
-    def wrap(cls, data, decode=True):
+    def wrap(cls, data, decode=True, start=True):
         if isinstance(data, Dictomatic):
             return data
         if decode and isinstance(data, (types.StringType, types.UnicodeType)):
             data = json_decode(data)
-        if isinstance(data, (types.ListType, types.TupleType)):
-            return [Dictomatic.wrap(item) for item in data]
+        if not start and isinstance(data, (types.ListType, types.TupleType)):
+            for value, index in enumerate(data):
+                if isinstance(value, (types.DictType,
+                                      types.ListType,
+                                      types.TupleType)):
+                    data[index] = Dictomatic.wrap(
+                        value, decode=False, start=False
+                    )
+            return data
         elif isinstance(data, types.DictType):
             data = json_ensure_string_keys(data)
             for key, value in data.iteritems():
-                if isinstance(value, types.DictType):
-                    data[key] = Dictomatic.wrap(value, decode=False)
+                if isinstance(value, (types.DictType,
+                                      types.ListType,
+                                      types.TupleType)):
+                    data[key] = Dictomatic.wrap(
+                        value, decode=False, start=False
+                    )
             return Dictomatic(data)
         elif isinstance(data, types.NoneType):
             return Dictomatic({})
         else:
             raise ValueError('Unexpected type: %s' % type(data))
 
-    """Makes a dictionary behave like an object with magic dehumping action."""
     def __getattr__(self, name, default=None):
+        '''
+        Makes a dictionary behave like an object with magic dehumping action.
+        '''
+
         # try it normally
         try:
             return self[name]
         except KeyError:
             if name.startswith('__'):
                 raise AttributeError()
-            # try it humped, so camel_case_is_awesome => camelCaseIsAwesome 
+            # try it humped, so camel_case_is_awesome => camelCaseIsAwesome
             try:
                 return self[skyline_case.sub(hump, name)]
             # it's really not here, let them know
@@ -139,4 +152,4 @@ class Dictomatic(dict):
 
     def __setattr__(self, name, value):
         self[name] = value
-    
+
