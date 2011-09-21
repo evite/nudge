@@ -134,9 +134,23 @@ class ValidatorTest(unittest.TestCase):
             i(input)
 
     @raises(vals.ValidationError)
+    def test_int_min_zero_fail(self):
+        inputs = [-1, -10]
+        i = vals.Int(min_=0)
+        for input in inputs:
+            i(input)
+
+    @raises(vals.ValidationError)
     def test_int_max_fail(self):
         inputs = [15, 30.09]
         i = vals.Int(max_=10)
+        for input in inputs:
+            i(input)
+
+    @raises(vals.ValidationError)
+    def test_int_max_zero_fail(self):
+        inputs = [15, 30.09]
+        i = vals.Int(max_=0)
         for input in inputs:
             i(input)
 
@@ -191,9 +205,23 @@ class ValidatorTest(unittest.TestCase):
             i(input)
 
     @raises(vals.ValidationError)
+    def test_float_min_zero_fail(self):
+        inputs = [-1, -3.14]
+        i = vals.Float(min_=0)
+        for input in inputs:
+            i(input)
+
+    @raises(vals.ValidationError)
     def test_float_max_fail(self):
         inputs = [15, 30.09]
         i = vals.Float(max_=10)
+        for input in inputs:
+            i(input)
+
+    @raises(vals.ValidationError)
+    def test_float_max_zero_fail(self):
+        inputs = [15, 30.09]
+        i = vals.Float(max_=0)
         for input in inputs:
             i(input)
 

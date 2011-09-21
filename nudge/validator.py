@@ -86,9 +86,9 @@ def Int(min_=None, max_=None):
             i = int(s)
         except (ValueError, TypeError):
             raise ValidationError("must be a number")
-        if (min_ and i < min_):
+        if (min_ is not None and i < min_):
             raise ValidationError("must be >= %d" % min_)
-        if (max_ and i > max_):
+        if (max_ is not None and i > max_):
             raise ValidationError("must be <= %d" % max_)
 
         return i
@@ -117,18 +117,18 @@ def Dict(min_=None, max_=None):
     return f
 
 def Float(min_=None, max_=None):
-    if min_:
+    if min_ is not None:
         min_ = float(min_)
-    if max_:
+    if max_ is not None:
         max_ = float(max_)
     def f(s):
         try:
             v = float(s)
         except (ValueError, TypeError):
             raise ValidationError("must be a number")
-        if (min_ and v < min_):
+        if (min_ is not None and v < min_):
             raise ValidationError("must be >= %d" % min_)
-        if (max_ and v > max_):
+        if (max_ is not None and v > max_):
             raise ValidationError("must be <= %d" % max_)
 
         return v
