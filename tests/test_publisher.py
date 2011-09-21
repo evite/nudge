@@ -22,7 +22,7 @@ import unittest
 import urlparse
 import StringIO
 
-import nudge.validator 
+import nudge.validator
 
 import nudge.arg as args
 import nudge.json as json
@@ -37,8 +37,8 @@ from nose.tools import raises
 
 
 class MockResponse(object):
-    def __init__(self, request, code, headers={}, buffer=None, 
-            effective_url='http://test.example.com', error=None, 
+    def __init__(self, request, code, headers={}, buffer=None,
+            effective_url='http://test.example.com', error=None,
             request_time=None, time_info={}):
         self.request = request
         self.code = code
@@ -87,6 +87,8 @@ def create_req(method, uri, version='HTTP/1.1', arguments={}, remote_ip='127.0.0
         "wsgi.url_scheme": "http",
         "arguments": args,
     }
+    for k, v in headers.iteritems():
+        env["HTTP_{0}".format(k.upper())] = v
     env['wsgi.input'] = StringIO.StringIO(body)
     return WSGIRequest(env)
 
@@ -177,7 +179,7 @@ class HandlerTest(unittest.TestCase):
         result = sp(req, resp.start_response)
         resp.write(result)
         self.assertEqual(req._buffer,response_buf(200, '{"called": 1}'))
-        
+
     def test_multiuri_handler_query_arg(self):
         def handler(user): return dict(name=user)
 
@@ -203,7 +205,7 @@ class HandlerTest(unittest.TestCase):
         result = sp(req, resp.start_response)
         resp.write(result)
         self.assertEqual(req._buffer,response_buf(200, '{"name": "other_user"}'))
-        
+
     def test_noargs_handlersuccess_empty(self):
         def handler(): return None
 
@@ -263,7 +265,7 @@ class HandlerTest(unittest.TestCase):
         result = sp(req, resp.start_response)
         resp.write(result)
         self.assertEqual(req._buffer,response_buf(200, '{"arg1": 1}'))
-        
+
 
     def test_arg_handlersuccess_part_deux(self):
         def handler(*args, **kwargs): return dict(arg1=1)
@@ -274,7 +276,7 @@ class HandlerTest(unittest.TestCase):
         result = sp(req, resp.start_response)
         resp.write(result)
         self.assertEqual(req._buffer,response_buf(200, '{"arg1": 1}'))
-        
+
 
     def test_arg_handlersuccess_part_tre(self):
         def handler(*args, **kwargs): return dict(arg1=1)
@@ -285,7 +287,7 @@ class HandlerTest(unittest.TestCase):
         result = sp(req, resp.start_response)
         resp.write(result)
         self.assertEqual(req._buffer,response_buf(400, '{"message": "body is not JSON", "code": 400}'))
-    
+
     def test_prevent_json_array(self):
         def handler():
             return [1,2,3]
@@ -327,7 +329,7 @@ class RendererTest(unittest.TestCase):
         self.assertEqual(req._buffer,
             response_buf(302, 'moved', content_type='text/html', headers={'Location': 'new_location' })
         )
-    
+
     def test_renderer_fail(self):
         def handler(): return "new_location"
         def renderer(result):
@@ -347,6 +349,37 @@ class RendererTest(unittest.TestCase):
         self.assertEqual(req._buffer,
             response_buf(302, 'moved', content_type='text/html', headers={'Location': 'new_location' })
         )
-    
+
+class CookieTest(unittest.TestCase):
+    '''
+    TODO: MAYBE consider testing the various edge cases of cookies like:
+    - multiple keys
+    - not completely url encoded garage
+    - unicode
+    '''
+    def test_cookie(self):
+        def handler(chocolate, hazel):
+            return {'chocolate': chocolate, 'hazel': hazel}
+
+        sp = ServicePublisher()
+        sp.add_endpoint(Endpoint(
+            name='',
+            method='GET',
+            uri='/cooookies',
+            function=handler,
+            args=Args(
+                chocolate=args.Cookie('chocolate'),
+                hazel=args.Cookie('hazel'),
+            )
+        ))
+        req = create_req('GET', '/cooookies', headers={'cookie':'chocolate=chip;hazel=nut'})
+        resp = MockResponse(req, 200)
+        result = sp(req, resp.start_response)
+
+        self.assertEqual(
+            {'chocolate': 'chip', 'hazel': 'nut'},
+            json.json_decode(result[0])
+        )
+
 if __name__ == '__main__':
     unittest.main()

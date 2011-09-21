@@ -1,6 +1,9 @@
-
+**
+* NOTE! this doc is severely outdated. Please try to breathe some life
+* when possible.
+**
 General Todo:
-* Support File objects (test currently disabled)
+* Support File objects (test currently disabled)(use nginx for file uploads)
 * Allow more control on content type. For example, I may want to insist
   that a post request comes in as json, or that the default output is something
   other than json (maybe). For example, I always forget to add the Content-Type
@@ -8,10 +11,11 @@ General Todo:
   missing a particular variable. Would be more helpful to tell me i need json,
   or assume it is and try to decode.
   Perhaps we can allow a list of possible incoming content types per EP.
-* 
+* Support and test the fallback app
 
 (Tests):
 * More of all tests
+* Cookie tests
 * Renderer tests
 * Validator tests
 * Generator tests
@@ -22,10 +26,10 @@ General Todo:
 
 Service Publisher:
 * We should consider passing encoded json strings as unicode strings always.
-* Tornado native support: Most tornado users do NOT use tornado's wsgi module, 
+* Tornado native support: Most tornado users do NOT use tornado's wsgi module,
   and we really need to support normal tornado requests. I think we already do,
   but we should test this.
-* Look into the possibility of the fallback app: 
+* Look into the possibility of the fallback app:
 
 Renderers:
 * Possible bug: if our endpoint function returns a list like
@@ -45,9 +49,9 @@ Args:
 * List sanity min and max checks must be 0 <= inf. Same with dict
 * Add the list and dict types
 * I feel like the optional shouldn't be a part of the args spec. We should look
-  to see if this arg exists, and if not, do nothing, otherwise use all the 
+  to see if this arg exists, and if not, do nothing, otherwise use all the
   validators
-* Go through the optional handling for each type. It looks like string and 
+* Go through the optional handling for each type. It looks like string and
   others do the wrong thing when optional.
 * Check client IP against a couple diff servers like nginx and haproxy. Also
   make sure it get the very first x-forwarded-for
@@ -65,7 +69,7 @@ Types: Is the preferred way to type check with types.XXX ?
 
 Gen:
 * Docs
-* Javascript 
+* Javascript
 * Maybe even simple jinja2 html forms.
 
 Maybe someday...

@@ -61,7 +61,7 @@ class Endpoint(object):
     sequential = []
     named = {}
 
-    def __init__(self, name=None, method=None, uri=None, uris=None, 
+    def __init__(self, name=None, method=None, uri=None, uris=None,
                  function=None, args=None, exceptions=None, renderer=None):
         # Someday support unicode here, for now only bytestrings.
         assert isinstance(name, str)
@@ -152,6 +152,7 @@ class WSGIHeaders(dict):
 class WSGIRequest(object):
 
     def __init__(self, req_dict):
+        # Should we use dictomatic here? (tiny slowdown)
         self.req = Dictomatic.wrap(req_dict)
         self.start_time = time.time()
         self.method = self.req['REQUEST_METHOD']
@@ -180,6 +181,29 @@ class WSGIRequest(object):
             elif k == 'CONTENT_TYPE':
                 _headers['Content-Type'] = v
         return _headers
+
+    @lazyprop
+    def cookies(self):
+        ''' I am assuming it is valid to have multiple cookies with the same
+        name even though that seems silly.
+
+        Also the individual cookies are split on the FIRST = so as to support
+        later = for unknown benefit.
+
+        TODO - support/test with unicode?
+             - Maybe nuke the HTTP_COOKIE from regular headers?
+        '''
+        _cookies = {}
+        if 'HTTP_COOKIE' in self.req:
+            for cookie in self.req['HTTP_COOKIE'].split(';'):
+                cookie = cookie.split('=')
+                if len(cookie) < 2: # Empty values will still be >= 2
+                    continue
+                if cookie[0] in _cookies:
+                    _cookies[cookie[0]].append('='.join(cookie[1:]))
+                else:
+                    _cookies[cookie[0]] = ['='.join(cookie[1:])]
+        return _cookies
 
     @lazyprop
     def arguments(self):
@@ -415,7 +439,10 @@ class ServicePublisher(object):
             #
             if endpoint and endpoint.exceptions:
                 try:
-                    error_response = handle_exception(e, endpoint.exceptions, default_handler=self._options.default_error_handler)
+                    error_response = handle_exception(
+                        e, endpoint.exceptions,
+                        default_handler=self._options.default_error_handler
+                    )
                 except (Exception), e:
                     # TODO this may log too loudly
                     _log.exception(
