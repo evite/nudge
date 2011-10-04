@@ -105,7 +105,7 @@ class Dictomatic(dict):
         if decode and isinstance(data, (types.StringType, types.UnicodeType)):
             data = json_decode(data)
         if not start and isinstance(data, (types.ListType, types.TupleType)):
-            for value, index in enumerate(data):
+            for index, value in enumerate(data):
                 if isinstance(value, (types.DictType,
                                       types.ListType,
                                       types.TupleType)):
