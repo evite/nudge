@@ -212,18 +212,22 @@ class WSGIRequest(object):
             # First url decode
             tmp = self.req.get('QUERY_STRING', '')
             if tmp:
-                # First url unescape and make unicode. Consider making the
-                # unicode decoding type a Nudge option.
-                tmp = unicode(urllib.unquote_plus(tmp), encoding="utf-8")
+                # First make unicode.
+                # Consider making the unicode decoding type a Nudge option.
+                tmp = unicode(tmp, encoding="utf-8")
+                # make sure to split before unquoting
+                # to handle arg keys/values that contain & or =
                 tmp = tmp.split('&')
                 tmp = [a.split('=') for a in tmp]
+                tmp = [map(urllib.unquote_plus, a) for a in tmp]
                 # Only keep args with k and v. f= will stay and be [u'f', u'']
                 tmp = filter(lambda x: len(x) == 2, tmp)
-                for a in tmp:
-                    if a[0] in _arguments:
-                        _arguments[a[0]].append(a[1])
+                for k, v in tmp:
+                    print k, v
+                    if k in _arguments:
+                        _arguments[k].append(v)
                     else:
-                        _arguments[a[0]] = [a[1]]
+                        _arguments[k] = [v]
         except (Exception), e:
             _log.exception(
                 "problem making arguments out of QUERY_STRING: %s",
