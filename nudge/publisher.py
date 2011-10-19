@@ -223,7 +223,6 @@ class WSGIRequest(object):
                 # Only keep args with k and v. f= will stay and be [u'f', u'']
                 tmp = filter(lambda x: len(x) == 2, tmp)
                 for k, v in tmp:
-                    print k, v
                     if k in _arguments:
                         _arguments[k].append(v)
                     else:
