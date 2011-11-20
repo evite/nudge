@@ -515,6 +515,30 @@ class ArgTest(unittest.TestCase):
         i = args.String("test")
         self.assertEqual("1", i.argspec(req, None))
 
+    def test_eq_in_arg_value(self):
+        req = create_json_post_req({"QUERY_STRING":"test=some%3Dthing"})
+        i = args.String("test", optional=True)
+        v = i.argspec(req, None)
+        self.assertEqual('some=thing', v, '"some=thing" != "%s"' % v)
+
+    def test_eq_in_arg_key(self):
+        req = create_json_post_req({"QUERY_STRING":"test%3D123=some"})
+        i = args.String("test=123", optional=True)
+        v = i.argspec(req, None)
+        self.assertEqual('some', v, '"some" != "%s"' % v)
+
+    def test_amp_in_arg_key(self):
+        req = create_json_post_req({"QUERY_STRING":"test%26123=some"})
+        i = args.String("test&123", optional=True)
+        v = i.argspec(req, None)
+        self.assertEqual('some', v, '"some" != "%s"' % v)
+
+    def test_amp_in_arg_value(self):
+        req = create_json_post_req({"QUERY_STRING":"test=some%26thing"})
+        i = args.String("test", optional=True)
+        v = i.argspec(req, None)
+        self.assertEqual('some&thing', v, '"some&thing" != "%s"' % v)
+
     def test_bool_in_args(self):
         req = create_json_post_req({"QUERY_STRING":"test=true"})
         i = args.Boolean("test")
