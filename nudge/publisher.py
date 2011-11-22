@@ -200,9 +200,11 @@ class WSGIRequest(object):
                 if len(cookie) < 2: # Empty values will still be >= 2
                     continue
                 if cookie[0] in _cookies:
-                    _cookies[cookie[0]].append('='.join(cookie[1:]))
+                    _cookies[cookie[0].strip()].append(
+                        '='.join(cookie[1:]).strip()
+                    )
                 else:
-                    _cookies[cookie[0]] = ['='.join(cookie[1:])]
+                    _cookies[cookie[0].strip()] = ['='.join(cookie[1:]).strip()]
         return _cookies
 
     @lazyprop
