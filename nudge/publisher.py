@@ -20,18 +20,18 @@ import cgi
 import logging
 import re
 import sys
-import types
 import time
 import types
 import urllib
 import warnings
-import cStringIO as StringIO
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 import nudge.json
 import nudge.log
-import nudge.arg as args
 from nudge.renderer import Json, RequestAwareRenderer
-from nudge.validator import ValidationError
 from nudge.json import Dictomatic
 from nudge.error import handle_exception, HTTPException, JsonErrorHandler,\
     DEFAULT_ERROR_CODE, DEFAULT_ERROR_CONTENT_TYPE, DEFAULT_ERROR_CONTENT, responses
@@ -294,8 +294,12 @@ def redirect(uri, headers=None):
 
 class ServicePublisher(object):
 
-    def __init__(self, fallbackapp=None, endpoints=None, \
+    def __init__(self, fallbackapp=None, endpoints=None,
                  debug=False, options=None, default_error_handler=None):
+        # Note fallback app needs to be a wsgi-compatible callable
+        if fallbackapp:
+            assert callable(fallbackapp), "Fallback app must be callable"
+        self._fallbackapp = fallbackapp
         self._debug = debug
         if self._debug:
             _log.setLevel(logging.DEBUG)
@@ -304,8 +308,6 @@ class ServicePublisher(object):
             assert isinstance(endpoints, list), "endpoints must be a list"
             for ep in endpoints:
                 self.add_endpoint(ep)
-        # TODO Fix fallback app here and below
-        self._fallbackapp = fallbackapp
 
         if not default_error_handler:
             default_error_handler = JsonErrorHandler
@@ -356,14 +358,18 @@ class ServicePublisher(object):
         args = req.QUERY_STRING.split('=')
 
     def __call__(self, environ, start_response):
-        """
+        '''
             This is called by each request to the server.
             This MUST return a valid HTTP response under all circumstances.
-        """
-        if isinstance(environ, types.DictType):
-            req = WSGIRequest(environ)
-        else:
-            req = environ
+
+            We expect environ to be a valid wgsi python dictionary.
+        '''
+        req = WSGIRequest(environ)
+
+#        if isinstance(environ, types.DictType):
+#            req = WSGIRequest(environ)
+#        else:
+#            req = environ
 
         # main exception handler to ensure client gets valid response.
         # defer any mutation of the request object (incl. writes to the client)
@@ -373,7 +379,7 @@ class ServicePublisher(object):
         final_content = ""
         endpoint = None
         try:
-            # allow '_method' query arg to overide method
+            # allow '_method' query arg to override method
             method = req.method
             if '_method' in req.arguments:
                 method = req.arguments['_method'][0].upper()
@@ -388,17 +394,15 @@ class ServicePublisher(object):
                     break
 
             if not match:
-                # TODO: Handle HTTPException in new world exceptions
-                raise HTTPException(404)
-                #
-                # Fallback app is untested with WSGI/EVENTLET
-                # FIXTHIS!!
-                #
-                # if self._fallbackapp:
-                    # _log.debug("falling through: %s %s" % (method, req.uri))
-                    # return self._fallbackapp(event_req, start_response)
-                # else:
-                    # raise HTTPException(404)
+                if self._fallbackapp:
+                    _log.debug("Using fallback app for request: (%s) (%s)" % \
+                               (method, req.uri))
+                    # Since recreating a stringio from the request body can be
+                    # expensive, we only want to do this if we fallback.
+                    environ['wsgi.input'] = StringIO.StringIO(req.body)
+                    return self._fallbackapp(environ, start_response)
+                else:
+                    raise HTTPException(404)
 
             # convert all values in req.arguments from lists to scalars,
             # then combine with path args.

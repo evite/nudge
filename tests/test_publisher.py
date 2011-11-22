@@ -77,6 +77,16 @@ class MockResponse(object):
         return "%s(%s)" % (self.__class__.__name__, args)
 
 
+class TestRequest(dict):
+
+    def __init__(self, d):
+        super(TestRequest, self).__init__(d)
+        self._buffer = ''
+
+    def write(self, content):
+        self._buffer += content
+
+
 def create_req(method, uri, version='HTTP/1.1', arguments={}, remote_ip='127.0.0.1', headers={}, body=''):
     env = {
         "REQUEST_METHOD": method.upper(),
@@ -90,7 +100,7 @@ def create_req(method, uri, version='HTTP/1.1', arguments={}, remote_ip='127.0.0
     for k, v in headers.iteritems():
         env["HTTP_{0}".format(k.upper())] = v
     env['wsgi.input'] = StringIO.StringIO(body)
-    return WSGIRequest(env)
+    return TestRequest(env)
 
 
 def response_buf(http_status, content, content_type='application/json; charset=UTF-8', headers={}, end='\r\n'):
@@ -378,6 +388,108 @@ class CookieTest(unittest.TestCase):
 
         self.assertEqual(
             {'chocolate': 'chip', 'hazel': 'nut'},
+            json.json_decode(result[0])
+        )
+
+class FallbackAppTest(unittest.TestCase):
+    '''
+    TODO test using the post body in the fallback app.
+
+
+    def create_req(method, uri, version='HTTP/1.1', arguments={}, remote_ip='127.0.0.1', headers={}, body=''):
+    env = {
+        "REQUEST_METHOD": method.upper(),
+        "CONTENT_TYPE": "application/json",
+        "PATH_INFO": uri,
+        "HTTP_HOST": "localhost",
+        "REMOTE_ADDR": remote_ip,
+        "wsgi.url_scheme": "http",
+        "arguments": args,
+    }
+    for k, v in headers.iteritems():
+        env["HTTP_{0}".format(k.upper())] = v
+    env['wsgi.input'] = StringIO.StringIO(body)
+
+
+    '''
+    def _fallback_app(self, env, start_resp):
+
+        if env['REQUEST_METHOD'] == 'POST':
+            # This used to fail since nudge had already read the FP
+            body = env['wsgi.input'].read()
+        else:
+            body = json.json_encode({'success': True})
+        start_resp(200, [('Content-Type', 'application/json; charset=utf8')])
+        return [body + '\r\n']
+
+    def _nudge_func(self):
+        return {'nudge': True}
+
+    def test_fallback_app_used(self):
+
+        endpoints = [
+            Endpoint(
+                name='',
+                method='GET',
+                uri='/test',
+                function=self._nudge_func,
+            )
+        ]
+
+        sp = ServicePublisher(endpoints=endpoints,
+                              fallbackapp=self._fallback_app)
+        req = create_req('GET', '/not-test')
+        resp = MockResponse(req, 200)
+        result = sp(req, resp.start_response)
+
+        self.assertEqual(
+            {'success': True},
+            json.json_decode(result[0])
+        )
+
+    def test_fallback_app_used_post_body(self):
+
+        endpoints = [
+            Endpoint(
+                name='',
+                method='GET',
+                uri='/test',
+                function=self._nudge_func,
+            )
+        ]
+
+        sp = ServicePublisher(endpoints=endpoints,
+                              fallbackapp=self._fallback_app)
+
+        body = json.json_encode({'success': True}) + '\r\n'
+        req = create_req('POST', '/not-test', body=body)
+        resp = MockResponse(req, 200)
+        result = sp(req, resp.start_response)
+
+        self.assertEqual(
+            {'success': True},
+            json.json_decode(result[0])
+        )
+
+    def test_fallback_app_not_used(self):
+
+        endpoints = [
+            Endpoint(
+                name='',
+                method='GET',
+                uri='/test',
+                function=self._nudge_func,
+            )
+        ]
+
+        sp = ServicePublisher(endpoints=endpoints,
+                              fallbackapp=self._fallback_app)
+        req = create_req('GET', '/test')
+        resp = MockResponse(req, 200)
+        result = sp(req, resp.start_response)
+
+        self.assertEqual(
+            {'nudge': True},
             json.json_decode(result[0])
         )
 
