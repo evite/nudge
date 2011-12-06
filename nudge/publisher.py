@@ -452,10 +452,11 @@ class ServicePublisher(object):
                         e, endpoint.exceptions,
                         default_handler=self._options.default_error_handler
                     )
+                    if not error_response:
+                        raise
                 except (Exception), e:
-                    # TODO this may log too loudly
                     _log.exception(
-                        "Endpoint %s failed to handle exception" % endpoint.name
+                        "Endpoint (%s) failed to handle exception" % endpoint.name
                     )
                     logged_trace = True
 

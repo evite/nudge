@@ -88,7 +88,7 @@ responses = {
 
 class JsonErrorHandler(object):
     """ Default nudge error handler.
-        If Nudge catches an HTTPException, we will try to set the code 
+        If Nudge catches an HTTPException, we will try to set the code
         from that exception. AssertionErrors are considered normal
         bad request errors, and 400 is returned. Otherwise this returns
         500 with {code:500 , message:message} where message is the exception
@@ -143,8 +143,7 @@ def handle_exception(exp, exp_handlers, default_handler=None):
                 return (exp_handler.code, exp_handler.content_type,
                         exp_handler.content, exp_handler.headers)
 
-    _log.exception("Unhandled exception class: %s", exp.__class__)
-    raise exp
+    return False
 
 class HTTPException(Exception):
 
