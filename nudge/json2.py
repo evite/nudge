@@ -18,21 +18,24 @@
 
 import datetime
 import re
-import time
 import types
-
+import json
+testsdf = '''
 try:
     from simplejson import JSONEncoder, JSONDecoder
-except:
+except ImportError:
     try:
         # See if appengine has this module
         from django.utils.simplejson import JSONEncoder, JSONDecoder
-    except:
-        raise ImportError(
-            "Cannot find an appropriate json module. Please easy_install "+\
-            "simplejson and try again."
-        )
-
+    except ImportError:
+        try:
+            from json import JSONEncoder, JSONDecoder
+        except ImportError:
+            raise ImportError(
+                "Cannot find an appropriate json module. Please easy_install "+\
+                "simplejson and try again."
+            )
+'''
 __all__ = [
     'Encoder',
     'json_encode',
@@ -44,7 +47,7 @@ __all__ = [
     'Dictomatic',
 ]
 
-class Encoder(JSONEncoder):
+class Encoder(json.JSONEncoder):
 
     def default(self, o):
         if hasattr(o, "json"):
@@ -57,7 +60,7 @@ _encoder = Encoder()
 def json_encode(o):
     return _encoder.encode(o)
 
-_decoder = JSONDecoder()
+_decoder = json.JSONDecoder()
 def json_decode(o):
     # remove tabs if they exists
     o = o.replace('\t','')

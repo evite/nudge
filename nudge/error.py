@@ -17,7 +17,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 import inspect
 import logging
-import nudge.json
+import nudge.json2
 
 _log = logging.getLogger("nudge.error")
 
@@ -114,7 +114,7 @@ class JsonErrorHandler(object):
         # TODO (maybe) add the rest of the exceptions members to the resp
         content = {'message': message, 'code':code}
         return code, self.content_type, \
-            nudge.json.json_encode(content), self.headers
+            nudge.json2.json_encode(content), self.headers
 
 def handle_exception(exp, exp_handlers, default_handler=None):
     # Check if this endpoint can handle this exception

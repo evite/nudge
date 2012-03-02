@@ -291,7 +291,7 @@ def _get_json_body(req):
         return None
 
     try:
-        body = nudge.json.json_decode(req.body)
+        body = nudge.json2.json_decode(req.body)
         req.arguments['_body_dict'] = body # cache it
         return body
     except (ValueError):

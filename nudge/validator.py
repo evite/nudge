@@ -20,7 +20,7 @@ import re
 import functools
 import types
 
-import nudge.json
+import nudge.json2
 import datetime
 
 __all__ = [
@@ -159,7 +159,7 @@ def Boolean():
 def Json():
     def f(s):
         try:
-            return nudge.json.json_decode(s)
+            return nudge.json2.json_decode(s)
         except (ValueError), e:
             raise ValidationError("must be valid json")
     return f

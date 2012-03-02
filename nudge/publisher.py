@@ -29,10 +29,10 @@ try:
 except ImportError:
     import StringIO
 
-import nudge.json
+import nudge.json2
 import nudge.log
 from nudge.renderer import Json, RequestAwareRenderer
-from nudge.json import Dictomatic
+from nudge.json2 import Dictomatic
 from nudge.error import handle_exception, HTTPException, JsonErrorHandler,\
     DEFAULT_ERROR_CODE, DEFAULT_ERROR_CONTENT_TYPE, DEFAULT_ERROR_CONTENT, responses
 
@@ -258,7 +258,7 @@ class WSGIRequest(object):
             # add any arguments from JSON body
             elif content_type.startswith("application/json"):
                 try:
-                    body = nudge.json.json_decode(self.body)
+                    body = nudge.json2.json_decode(self.body)
                     if isinstance(body, types.DictType):
                         _arguments = dict(_arguments, **body)
 

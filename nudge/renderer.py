@@ -18,14 +18,14 @@
 import base64
 import types
 from cStringIO import StringIO
-from nudge.json import json_encode
+from nudge.json2 import json_encode
 from nudge.error import HTTPException, SecurityException
 
 __all__ = [
-    'Result', 
-    'RequestAwareRenderer', 
-    'Json', 
-    'InsecureJson', 
+    'Result',
+    'RequestAwareRenderer',
+    'Json',
+    'InsecureJson',
     'Redirect',
     'CSS',
     'Img',
@@ -55,12 +55,12 @@ class RequestAwareRenderer(object):
 
 class Json(object):
     ''' Default Nudge HTTP Content Type. Encodes the entire endpoint
-        result as json, and returns. 
-        
+        result as json, and returns.
+
         Note this renderer will not allow you to pass back a top level
         list or tuple (javascript array) because it is insecure, and could
         allow a CSRF attack. See here:
-        http://flask.pocoo.org/docs/security/#json-security    
+        http://flask.pocoo.org/docs/security/#json-security
     '''
     def __call__(self, result):
         if result == None:
@@ -167,9 +167,9 @@ class ImgOrRedirect(object):
                 headers=headers,
                 http_status=302,
             )
-            
+
 class ImgToB64String(object):
-    
+
     def __call__(self, content):
         out = StringIO()
         content.save(out, format=content.format)
@@ -182,7 +182,7 @@ class ImgToB64String(object):
         )
 
 class ImgToString(object):
-    
+
     def __call__(self, content):
         out = StringIO()
         content.save(out, format=content.format)
@@ -194,7 +194,7 @@ class ImgToString(object):
         )
 
 class Binary(object):
-    
+
     def __call__(self, content):
         return Result(
             content=content,
