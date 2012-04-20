@@ -98,7 +98,7 @@ def create_req(method, uri, version='HTTP/1.1', arguments={}, remote_ip='127.0.0
         "arguments": args,
     }
     for k, v in headers.iteritems():
-        env["HTTP_{0}".format(k.upper())] = v
+        env["HTTP_%s" % (k.upper())] = v
     env['wsgi.input'] = StringIO.StringIO(body)
     return TestRequest(env)
 

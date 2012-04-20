@@ -28,12 +28,11 @@ setup(
     packages=[
         'nudge',
     ],
-    namespace_packages = ['nudge'],
+    namespace_packages=['nudge'],
     install_requires=['simplejson>=2.1.3'],
-    
+
     zip_safe=False,
 
-    author = "Evite LLC",
-    description = "Nudge",
+    author="Evite LLC",
+    description="Nudge",
 )
-
