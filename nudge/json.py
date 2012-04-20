@@ -16,22 +16,29 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
+# Since this file is called 'json' and below we need to import the stdlib json
+# we need to make sure we are using absolute importing. Make sure this works on
+# google appengine python 2.5
+from __future__ import absolute_import
+
 import datetime
 import re
-import time
 import types
 
-try:
+try:# We want to try to use simplejson first because it could have C-speedups
     from simplejson import JSONEncoder, JSONDecoder
-except:
-    try:
-        # See if appengine has this module
-        from django.utils.simplejson import JSONEncoder, JSONDecoder
-    except:
-        raise ImportError(
-            "Cannot find an appropriate json module. Please easy_install "+\
-            "simplejson and try again."
-        )
+except ImportError:
+    try:# Next try the regular json library (in 2.6 and 2.7)
+        from json import JSONEncoder, JSONDecoder
+    except ImportError:
+        try:
+            # Finally check if django is available (will be for py2.5 on gae)
+            from django.utils.simplejson import JSONEncoder, JSONDecoder
+        except:
+            raise ImportError(
+                "Cannot find an appropriate json module. Please easy_install "+\
+                "simplejson and try again."
+            )
 
 __all__ = [
     'Encoder',
