@@ -102,38 +102,43 @@ def hump(match):
         result = result + group[0:len(group)-2]+group[len(group)-1].upper()
     return result
 
+def wrap(data, typ, decode=True, start=True):
+    ''' Generic object dictionary type wrapper function. This will json decode
+    a passed in string, and make all sub dictionaries object dictionaries of
+    type typ. '''
+    if isinstance(data, typ):
+        return data
+    if decode and isinstance(data, (types.StringType, types.UnicodeType)):
+        data = json_decode(data)
+    if not start and isinstance(data, (types.ListType, types.TupleType)):
+        for index, value in enumerate(data):
+            if isinstance(value, (types.DictType,
+                                  types.ListType,
+                                  types.TupleType)):
+                data[index] = wrap(
+                    value, typ, decode=False, start=False
+                )
+        return data
+    elif isinstance(data, types.DictType):
+        data = json_ensure_string_keys(data)
+        for key, value in data.iteritems():
+            if isinstance(value, (types.DictType,
+                                  types.ListType,
+                                  types.TupleType)):
+                data[key] = wrap(
+                    value, typ, decode=False, start=False
+                )
+        return typ(data)
+    elif isinstance(data, types.NoneType):
+        return typ({})
+    else:
+        raise ValueError('Unexpected type: %s' % type(data))
 
 class Dictomatic(dict):
 
     @classmethod
     def wrap(cls, data, decode=True, start=True):
-        if isinstance(data, Dictomatic):
-            return data
-        if decode and isinstance(data, (types.StringType, types.UnicodeType)):
-            data = json_decode(data)
-        if not start and isinstance(data, (types.ListType, types.TupleType)):
-            for index, value in enumerate(data):
-                if isinstance(value, (types.DictType,
-                                      types.ListType,
-                                      types.TupleType)):
-                    data[index] = Dictomatic.wrap(
-                        value, decode=False, start=False
-                    )
-            return data
-        elif isinstance(data, types.DictType):
-            data = json_ensure_string_keys(data)
-            for key, value in data.iteritems():
-                if isinstance(value, (types.DictType,
-                                      types.ListType,
-                                      types.TupleType)):
-                    data[key] = Dictomatic.wrap(
-                        value, decode=False, start=False
-                    )
-            return Dictomatic(data)
-        elif isinstance(data, types.NoneType):
-            return Dictomatic({})
-        else:
-            raise ValueError('Unexpected type: %s' % type(data))
+        return wrap(data, cls, decode, start)
 
     def __getattr__(self, name, default=None):
         '''
@@ -159,4 +164,17 @@ class Dictomatic(dict):
 
     def __setattr__(self, name, value):
         self[name] = value
+
+class ObjDict(Dictomatic):
+    ''' Simple dictionary that behaves like an object dict that doesn't hide
+    errors, or do any dehumping stuff. '''
+
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError:
+            raise AttributeError( # Raise a standard py attribute error
+                "'nudge.json.ObjDict' has no attribute %s" % name
+            )
+
 
