@@ -16,13 +16,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+
 import datetime
-import unittest
-
 from nose.tools import raises
-
 import nudge.json as json
-
+import unittest
 
 class JsonTest(unittest.TestCase):
 
@@ -145,4 +143,19 @@ class JsonTest(unittest.TestCase):
         data = '{"testThis":2,"blah":"woot","things":[12,123,1234],"this":{"me":"my"}}'
         result = json.Dictomatic.wrap(data)
         self.assertEqual(None, result['bad_thing'])
+
+def test_obj_dict_success():
+    'Simple test to make sure object dict will give us back a nested dict'
+    d = json.ObjDict.wrap('{"Test":{"test_sub":"test"}}')
+    assert d == {"Test":{"test_sub":"test"}}
+    print d.Test
+    assert d.Test
+
+@raises(AttributeError)
+def test_obj_dict_fail():
+    'Simple test making an object dict then trying to access a missing attr'
+    d = json.ObjDict.wrap('{"Test":{"test_sub":"test"}}')
+    assert d == {"Test":{"test_sub":"test"}}
+    print "****** This should die", d.some_ne_attr
+
 
