@@ -33,6 +33,17 @@ setup(
 
     zip_safe=False,
 
-    author="Evite LLC",
-    description="Nudge",
+    author='Evite Inc',
+    author_email='unix@evite.com',
+    description='Nudge',
+    url='evite.github.com/nudge/',
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Environment :: Web Environment',
+        'Intended Audience :: Developers',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: Microsoft :: Windows',
+        'Operating System :: POSIX',
+        'Programming Language :: Python',
+    ],
 )
