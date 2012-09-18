@@ -1,3 +1,19 @@
+2012-may-warren
+* Use cookie lib
+* Full POST body as dict
+* Empty/optional for args
+* Identifier string arg
+** TESTS and really audit which type of tests we are missing
+* Remove all json stuff
+* Audit the main publisher call:
+** Perhaps DONT make a WSGIRequest for each call
+** Double check the error handling/logging
+* Headers need to be a dictionary of tuples (get and test for multiples)
+* Same with cookies
+* Custom arg shouldn't be doing any dehumping ? dont understand this
+* Remove json body field and associated tests
+* Check the redirect renderer. Should NOT just return the text None on None.
+
 **
 * NOTE! this doc is severely outdated. Please try to breathe some life
 * when possible.
