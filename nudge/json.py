@@ -49,6 +49,7 @@ __all__ = [
     'dehump',
     'hump',
     'Dictomatic',
+    'ObjDict',
 ]
 
 class Encoder(JSONEncoder):

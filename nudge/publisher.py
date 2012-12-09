@@ -426,7 +426,10 @@ class ServicePublisher(object):
             result = endpoint(*args, **kwargs)
 
             # TODO make sure this works with unicode
-            _log.debug(_gen_trace_str(endpoint.function, args, kwargs, result))
+            # This is real, super annoying, lets only use if in debug mode
+            if self._debug:
+                _log.debug(_gen_trace_str(
+                    endpoint.function, args, kwargs, result))
 
             if isinstance(endpoint.renderer, RequestAwareRenderer):
                 r = endpoint.renderer(req, result)
