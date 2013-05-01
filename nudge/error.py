@@ -32,7 +32,7 @@ __all__ = [
     'SecurityException',
 ]
 DEFAULT_ERROR_CODE = 500
-DEFAULT_ERROR_CONTENT_TYPE = "application/json; charset=UTF-8"
+DEFAULT_ERROR_CONTENT_TYPE = "application/json"
 DEFAULT_ERROR_CONTENT = '{"message": "%s", "code": %i}' % (
     "Internal Server Error",
     DEFAULT_ERROR_CODE,
