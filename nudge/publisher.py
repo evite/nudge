@@ -467,7 +467,7 @@ class ServicePublisher(object):
                 try:
                     # Try one more time to handle a base exception
                     handler = self._options.default_error_handler()
-                    error_response = handler(e)
+                    error_response = handler(e, req)
                 except (Exception), e:
                     _log.error(
                         "Default error handler failed to handle exception")
