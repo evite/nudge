@@ -216,6 +216,7 @@ class Action(Arg):
     ]
     validators = [validate.StringAlternatives(actions)]
 
+
 class UploadedFile(CustomArg):
 
     def __init__(self, name):
@@ -227,6 +228,25 @@ class UploadedFile(CustomArg):
                 'content_type': f['content_type'],
             }
         self.argspec = func
+
+
+class Body(Arg):
+
+    def __init__(self, name=None, optional=False):
+        self.name = name
+        self.optional = optional
+
+    def argspec(self, req, inargs):
+        if not req.body:
+            if self.optional:
+                return None
+            else:
+                raise nudge.publisher.HTTPException(
+                    400,
+                    "body is required"
+                )
+        return req.body
+
 
 class JsonBody(CustomArg):
     """ Checks that there's a valid JSON message body, converts this into
@@ -240,7 +260,6 @@ class JsonBody(CustomArg):
         You might use this in the case where you want the json body object
         as a single arg (maybe the body is very large)
     """
-
     def __init__(self, optional=False, extend={}):
         def func(req, inargs):
             if not req.body:
@@ -256,6 +275,7 @@ class JsonBody(CustomArg):
                 return dict(json_body, **extend)
             return json_body
         self.argspec = func
+
 
 class JsonBodyField(CustomArg):
     """ DEPRECATED -
@@ -281,6 +301,7 @@ class JsonBodyField(CustomArg):
             return None
         self.argspec = func
 
+
 def _get_json_body(req):
     """ decode and cache json body """
 
@@ -296,4 +317,3 @@ def _get_json_body(req):
         return body
     except (ValueError):
         raise nudge.publisher.HTTPException(400, "body is not JSON")
-
