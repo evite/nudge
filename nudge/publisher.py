@@ -28,6 +28,7 @@ try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
+from functools import partial
 
 import nudge.json
 import nudge.log
@@ -214,14 +215,13 @@ class WSGIRequest(object):
             # First url decode
             tmp = self.req.get('QUERY_STRING', '')
             if tmp:
-                # First make unicode.
-                # Consider making the unicode decoding type a Nudge option.
-                tmp = unicode(tmp, encoding="utf-8")
                 # make sure to split before unquoting
                 # to handle arg keys/values that contain & or =
                 tmp = tmp.split('&')
                 tmp = [a.split('=') for a in tmp]
                 tmp = [map(urllib.unquote_plus, a) for a in tmp]
+                # Consider making the unicode decoding type a Nudge option.
+                tmp = [map(partial(unicode, encoding='utf-8'), a) for a in tmp]
                 # Only keep args with k and v. f= will stay and be [u'f', u'']
                 tmp = filter(lambda x: len(x) == 2, tmp)
                 for k, v in tmp:
