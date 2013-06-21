@@ -103,6 +103,7 @@ def hump(match):
         result = result + group[0:len(group)-2]+group[len(group)-1].upper()
     return result
 
+
 def wrap(data, typ, decode=True, start=True):
     ''' Generic object dictionary type wrapper function. This will json decode
     a passed in string, and make all sub dictionaries object dictionaries of
@@ -135,6 +136,7 @@ def wrap(data, typ, decode=True, start=True):
     else:
         raise ValueError('Unexpected type: %s' % type(data))
 
+
 class Dictomatic(dict):
 
     @classmethod
@@ -166,9 +168,44 @@ class Dictomatic(dict):
     def __setattr__(self, name, value):
         self[name] = value
 
+
+def wrap_obj(data, typ, decode=True, start=True):
+    ''' Dont force string keys '''
+    if isinstance(data, typ):
+        return data
+    if decode and isinstance(data, (types.StringType, types.UnicodeType)):
+        data = json_decode(data)
+    if not start and isinstance(data, (types.ListType, types.TupleType)):
+        for index, value in enumerate(data):
+            if isinstance(value, (types.DictType,
+                                  types.ListType,
+                                  types.TupleType)):
+                data[index] = wrap(
+                    value, typ, decode=False, start=False
+                )
+        return data
+    elif isinstance(data, types.DictType):
+        for key, value in data.iteritems():
+            if isinstance(value, (types.DictType,
+                                  types.ListType,
+                                  types.TupleType)):
+                data[key] = wrap(
+                    value, typ, decode=False, start=False
+                )
+        return typ(data)
+    elif isinstance(data, types.NoneType):
+        return typ({})
+    else:
+        raise ValueError('Unexpected type: %s' % type(data))
+
+
 class ObjDict(Dictomatic):
     ''' Simple dictionary that behaves like an object dict that doesn't hide
     errors, or do any dehumping stuff. '''
+
+    @classmethod
+    def wrap(cls, data, decode=True, start=True):
+        return wrap_obj(data, cls, decode, start)
 
     def __getattr__(self, name):
         try:
@@ -177,5 +214,3 @@ class ObjDict(Dictomatic):
             raise AttributeError( # Raise a standard py attribute error
                 "'nudge.json.ObjDict' has no attribute %s" % name
             )
-
-
