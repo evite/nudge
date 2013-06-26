@@ -28,6 +28,7 @@ __all__ = [
     'responses',
     'JsonErrorHandler',
     'handle_exception',
+    'HTTPError',
     'HTTPException',
     'SecurityException',
 ]
@@ -86,6 +87,7 @@ responses = {
   505: 'HTTP Version Not Supported',
 }
 
+
 class JsonErrorHandler(object):
     """ Default nudge error handler.
         If Nudge catches an HTTPException, we will try to set the code
@@ -116,6 +118,7 @@ class JsonErrorHandler(object):
         return code, self.content_type, \
             nudge.json.json_encode(content), self.headers
 
+
 def handle_exception(exp, exp_handlers, default_handler=None):
     # Check if this endpoint can handle this exception
     if exp_handlers:
@@ -145,11 +148,17 @@ def handle_exception(exp, exp_handlers, default_handler=None):
 
     return False
 
-class HTTPException(Exception):
+
+class HTTPError(Exception):
 
     def __init__(self, status_code, message=None):
         self.status_code = status_code
         self.message = message
+
+
+# Legacy
+HTTPException = HTTPError
+
 
 class SecurityException(Exception):
     pass
