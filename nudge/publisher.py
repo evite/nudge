@@ -63,7 +63,7 @@ class Endpoint(object):
     named = {}
 
     def __init__(self, name=None, method=None, uri=None, uris=None,
-                 function=None, args=None, exceptions=None, renderer=None):
+                 function=None, args=None, renderer=None):
         # Someday support unicode here, for now only bytestrings.
         assert isinstance(name, str)
         assert isinstance(method, str)
@@ -73,9 +73,9 @@ class Endpoint(object):
         assert callable(function) or isinstance(function, str), \
             "function must be callable or a string, but was %s" % type(function)
 
-        assert not exceptions or isinstance(exceptions, dict), \
-            "exceptions must be a dict, but was type %s" % type(exceptions)
-        # TODO maybe do some more checking on exceptions
+        # TODO completely remove exceptions from endpoints.
+        # assert not exceptions or isinstance(exceptions, dict), \
+        #     "exceptions must be a dict, but was type %s" % type(exceptions)
 
         self.name = name
         self.method = method
@@ -89,7 +89,9 @@ class Endpoint(object):
             assert not self.named or isinstance(self.named, dict), \
                 "named must be a dict, but was type %s" % type(self.named)
 
-        self.exceptions = exceptions
+        # TODO remove this fully later
+        self.exceptions = None
+        # self.exceptions = exceptions
         if renderer:
             if isinstance(renderer, types.TypeType):
                 # support cases where the renderer was specified by the
