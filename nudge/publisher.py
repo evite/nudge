@@ -156,11 +156,12 @@ class WSGIRequest(object):
 
     def __init__(self, req_dict):
         # Should we use dictomatic here? (tiny slowdown)
+        # REVIEW: From the following items, it feels like we can remove the Dictomatic wrapper.
         self.req = Dictomatic.wrap(req_dict)
         self.start_time = time.time()
-        self.method = self.req['REQUEST_METHOD']
-        self.remote_ip = self.req['REMOTE_ADDR']
-        self.body = self.req['wsgi.input'].read()
+        self.method = self.req.get('REQUEST_METHOD')
+        self.remote_ip = self.req.get('REMOTE_ADDR', self.req.get('HTTP_REMOTE_ADDR'))
+        self.body = self.req.get('wsgi.input').read()
         self._buffer = ''
 
     @lazyprop
