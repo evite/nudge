@@ -99,7 +99,7 @@ class JsonErrorHandler(object):
     content_type = DEFAULT_ERROR_CONTENT_TYPE
     content = DEFAULT_ERROR_CONTENT
     headers = {}
-    def __call__(self, exp):
+    def __call__(self, exp, req=None, log_assert=True):
         code = self.code
         message = exp.message
         if isinstance(exp, HTTPException):
