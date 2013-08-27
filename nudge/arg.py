@@ -27,8 +27,10 @@ __all__ = [
     'String',
     'Boolean',
     'Date',
+    'DateTime',
     'Json',
     'Integer',
+    'Float',
     'ClientIp',
     'RequestHeader',
     'Action',
@@ -155,6 +157,16 @@ class Date(Arg):
             validate.Date()
         )
 
+class DateTime(Arg):
+
+    def __init__(self, name, default=None, optional=False):
+        super(DateTime, self).__init__(
+            name,
+            optional,
+            default,
+            validate.DateTime()
+        )
+
 class Json(Arg):
 
     def __init__(self, name, default=None, optional=False):
@@ -174,6 +186,17 @@ class Integer(Arg):
             optional,
             default,
             validate.Int(min_, max_)
+        )
+
+class Float(Arg):
+
+    def __init__(self, name, min_=None, max_=None,
+                 default=None, optional=False):
+        super(Float, self).__init__(
+            name,
+            optional,
+            default,
+            validate.Float(min_, max_)
         )
 
 class ClientIp(CustomArg):
