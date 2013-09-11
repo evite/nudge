@@ -36,6 +36,8 @@ from nudge.renderer import Json, RequestAwareRenderer
 from nudge.json import Dictomatic
 from nudge.error import handle_exception, HTTPException, JsonErrorHandler,\
     DEFAULT_ERROR_CODE, DEFAULT_ERROR_CONTENT_TYPE, DEFAULT_ERROR_CONTENT, responses
+from nudge.admin import Admin
+
 
 _log = logging.getLogger("nudge.publisher")
 
@@ -322,6 +324,7 @@ class ServicePublisher(object):
             assert isinstance(options, dict), "options must be of type dict"
             self._options.update(options)
         self.verify_options()
+        self.admin = Admin(self)
 
     def verify_options(self):
         msg = "Default exception handler "
@@ -367,6 +370,10 @@ class ServicePublisher(object):
 
             We expect environ to be a valid wgsi python dictionary.
         '''
+
+        if self.admin.is_recording:
+            self.admin._start_req(environ)
+
         req = WSGIRequest(environ)
 
 #        if isinstance(environ, types.DictType):
@@ -480,7 +487,9 @@ class ServicePublisher(object):
             code, content_type, content, extra_headers = \
                 error_response or self._options.default_error_response
 
-        final_content = _finish_request(
+        # This can alter the response if theres an error, so lets save all the
+        # components to feed into the admin.
+        final_content, code, final_headers = _finish_request(
             req,
             start_response,
             code,
@@ -488,8 +497,11 @@ class ServicePublisher(object):
             content,
             extra_headers
         )
+        if self.admin.is_recording:
+            self.admin._stop_req(final_content, code, final_headers)
 
         return [final_content + "\r\n"]
+
 
 def _finish_request(req, start_response, code, content_type, content, headers):
     try:
@@ -516,7 +528,7 @@ def _finish_request(req, start_response, code, content_type, content, headers):
         str(code) + ' ' + responses[code],
         final_headers
     )
-    return content
+    return content, code, final_headers
 
 def _gen_trace_str(f, args, kwargs, res):
     argsstr = ''.join(map(lambda v: "%s, " % v, args))
