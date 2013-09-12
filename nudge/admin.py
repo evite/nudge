@@ -30,19 +30,18 @@ def get_admin():
     return __admin
 
 class Admin(object):
-    # We have started recording requests
-    is_recording = False
     # Object to hold all the requests
     requests = None
 
     def __init__(self, service_publisher):
         self.sp = service_publisher
+        self.is_recording = False
 
-    def start_record(self):
-        pass
+    def start_recording(self):
+        self.is_recording = True
 
-    def stop_record(self):
-        pass
+    def stop_recording(self):
+        self.is_recording = False
 
     # Called from SP
     def _start_req(self, wsgi_env):
