@@ -38,6 +38,8 @@ from nudge.error import handle_exception, HTTPException, JsonErrorHandler,\
     DEFAULT_ERROR_CODE, DEFAULT_ERROR_CONTENT_TYPE, DEFAULT_ERROR_CONTENT, responses
 from nudge.admin import Admin, set_admin
 
+import hashlib
+
 _log = logging.getLogger("nudge.publisher")
 
 __all__ = [
@@ -370,9 +372,20 @@ class ServicePublisher(object):
 
             We expect environ to be a valid wgsi python dictionary.
         '''
-
+        req_id = None
+        # NOTE: Will always record the "STOP RECORDING" request, but not it's response.
+        # NOTE: Will record the response of the "START RECORDING" but not it's request.
         if self.admin.is_recording:
-            self.admin._start_req(environ)
+            req_body = environ['wsgi.input'].getvalue()
+            del environ['wsgi.input']
+            try:
+                # FIXME: Not safe, use a better unique key generator later.
+                req_id = str(hashlib.sha1(str(environ)).hexdigest())
+                self.admin._start_req(req_id, environ, req_body)
+            except:
+                pass
+            # We want the request to continue even if recording brakes.
+            environ['wsgi.input'] = StringIO.StringIO(req_body) # Imported from cStringIO
 
         req = WSGIRequest(environ)
 
@@ -498,7 +511,7 @@ class ServicePublisher(object):
             extra_headers
         )
         if self.admin.is_recording:
-            self.admin._stop_req(final_content, code, final_headers)
+            self.admin._stop_req(req_id, final_content, code, final_headers)
 
         return [final_content + "\r\n"]
 

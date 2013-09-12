@@ -15,7 +15,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-import cStringIO
 from pprint import pformat
 import logging as _log
 
@@ -30,37 +29,31 @@ def get_admin():
     return __admin
 
 class Admin(object):
-    # Object to hold all the requests
-    requests = None
-
     def __init__(self, service_publisher):
         self.sp = service_publisher
+
+        # Flag that the ServicePublisher checks to see if it should record a req or not.
         self.is_recording = False
+        # Object to hold all the requests
+        self.records = {}
 
     def start_recording(self):
         self.is_recording = True
 
     def stop_recording(self):
         self.is_recording = False
+        return self.records
+
+    def clear_recording(self):
+        self.records = {}
 
     # Called from SP
-    def _start_req(self, wsgi_env):
+    def _start_req(self, req_id, wsgi_env, req_body):
         # NOTE we need to restore the request body after we read it.
-        req_body = wsgi_env['wsgi.input'].getvalue()
-        del wsgi_env['wsgi.input']
-        _log.warn("*********************** Incoming request:")
-        _log.warn("Got WSGI ENV:")
-        _log.warn(pformat(wsgi_env))
-        _log.warn("Got request body:")
-        _log.warn(req_body)
-        wsgi_env['wsgi.input'] = cStringIO.StringIO(req_body)
+        self.records[req_id] = {'wsgi_env':wsgi_env, 'wsgi_req_body':req_body}
 
-    def _stop_req(self, content, status_code, headers):
-        _log.warn("\n*********************** Outgoing response:")
-        _log.warn("Response content:")
-        _log.warn(content)
-        _log.warn("Status code (%i)", status_code)
-        _log.warn("Headers: ")
-        _log.warn(pformat(headers))
-
-
+    def _stop_req(self, req_id, content, status_code, headers):
+        if req_id  in self.records:
+            self.records[req_id].update({'resp_headers':headers, 'status_code':status_code, 'resp_body':content})
+        else:
+            _log.warn("Tried to record a response for a non-existent request.")
