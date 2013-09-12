@@ -36,8 +36,7 @@ from nudge.renderer import Json, RequestAwareRenderer
 from nudge.json import Dictomatic
 from nudge.error import handle_exception, HTTPException, JsonErrorHandler,\
     DEFAULT_ERROR_CODE, DEFAULT_ERROR_CONTENT_TYPE, DEFAULT_ERROR_CONTENT, responses
-from nudge.admin import Admin
-
+from nudge.admin import Admin, set_admin
 
 _log = logging.getLogger("nudge.publisher")
 
@@ -325,6 +324,7 @@ class ServicePublisher(object):
             self._options.update(options)
         self.verify_options()
         self.admin = Admin(self)
+        set_admin(self.admin)
 
     def verify_options(self):
         msg = "Default exception handler "
