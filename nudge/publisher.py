@@ -384,7 +384,7 @@ class ServicePublisher(object):
                 self.admin._start_req(req_id, environ, req_body)
             except:
                 pass
-            # We want the request to continue even if recording brakes.
+            # We want the request to continue even if recording breaks.
             environ['wsgi.input'] = StringIO.StringIO(req_body) # Imported from cStringIO
 
         req = WSGIRequest(environ)

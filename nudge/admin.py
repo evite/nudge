@@ -47,12 +47,16 @@ class Admin(object):
     def clear_recording(self):
         self.records = {}
 
-    # Called from SP
     def _start_req(self, req_id, wsgi_env, req_body):
-        # NOTE we need to restore the request body after we read it.
+        """
+        Called by ServicePublisher to record the environment of a request.
+        """
         self.records[req_id] = {'wsgi_env':wsgi_env, 'wsgi_req_body':req_body}
 
     def _stop_req(self, req_id, content, status_code, headers):
+        """
+        Called by ServicePublisher to record the environment associated with a response.
+        """
         if req_id  in self.records:
             self.records[req_id].update({'resp_headers':headers, 'status_code':status_code, 'resp_body':content})
         else:
