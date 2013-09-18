@@ -28,7 +28,11 @@ def get_admin():
     global __admin
     return __admin
 
+
 class Admin(object):
+    """
+    NOTE: Add an endpoint sanity check wrapper.
+    """
     def __init__(self, service_publisher):
         self.sp = service_publisher
 
