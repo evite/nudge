@@ -244,11 +244,11 @@ class UploadedFile(CustomArg):
 
     def __init__(self, name):
         def func(req, inargs):
-            f = req.files[name][0]
+            f = req.files[name]
             return {
-                'filename': f['filename'],
-                'data': f['body'],
-                'content_type': f['content_type'],
+                'filename': f.filename,
+                'data': f.value,
+                'content_type': f.type,
             }
         self.argspec = func
 
