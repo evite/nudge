@@ -64,7 +64,7 @@ class Arg(object):
                 exists = True
                 data = inargs[self.name]
             # Default assumes optional=True
-            if not data:
+            if data is None:
                 if self.optional:
                     return self.default
                 elif exists:
