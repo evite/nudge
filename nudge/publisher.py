@@ -385,7 +385,11 @@ class ServicePublisher(object):
             except:
                 pass
             # We want the request to continue even if recording breaks.
-            environ['wsgi.input'] = StringIO.StringIO(req_body) # Imported from cStringIO
+            environ['wsgi.input'] = StringIO.StringIO(req_body)  # Imported from cStringIO
+
+        # Record this API call if we are recording
+        if self.admin.is_recording_endpoint_coverage:
+            self.admin.update_api_coverage_for_endpoint(environ)
 
         req = WSGIRequest(environ)
 
