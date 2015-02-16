@@ -163,6 +163,7 @@ class WSGIRequest(object):
         self.remote_ip = self.req.get('REMOTE_ADDR', self.req.get('HTTP_REMOTE_ADDR'))
         self.body = self.req.get('wsgi.input').read()
         self._buffer = ''
+        self.files = {}
 
     @lazyprop
     def path(self):
@@ -214,6 +215,7 @@ class WSGIRequest(object):
     @lazyprop
     def arguments(self):
         _arguments = {}
+        _files = {}
         try:
             # First url decode
             tmp = self.req.get('QUERY_STRING', '')
@@ -253,7 +255,10 @@ class WSGIRequest(object):
                         keep_blank_values=1
                     )
                     for k in fs.keys():
-                        _arguments[k] = fs[k].value
+                        part = fs[k]
+                        if part.filename:
+                            _files[k] = part
+                        _arguments[k] = part.value
                 except:
                     _log.exception(
                         "problem parsing multipart/form-data"
@@ -267,6 +272,8 @@ class WSGIRequest(object):
 
                 except (ValueError):
                     raise HTTPException(400, "body is not JSON")
+
+        self.files = _files
         return _arguments
 
     def write(self, content):

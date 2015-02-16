@@ -678,3 +678,28 @@ class ArgTest(unittest.TestCase):
         i = args.Dict("test")
         self.assertEqual([], i.argspec(req, None))
 
+    def test_uploaded_file(self):
+        input = StringIO.StringIO('''
+-----------------------------41184676334
+Content-Disposition: form-data; name="caption"
+
+Summer vacation
+-----------------------------41184676334
+Content-Disposition: form-data; name="upload"; filename="extra_data.txt"
+Content-Type: text/plain
+
+Some more data about my vacation
+-----------------------------41184676334--
+''')
+        request = WSGIRequest({
+            'REQUEST_METHOD': 'POST',
+            'REMOTE_ADDR': '127.0.0.1',
+            'CONTENT_TYPE': 'multipart/form-data; boundary=---------------------------41184676334',
+            'wsgi.input': input,
+        })
+
+        upload = args.UploadedFile('upload')
+        assert 'upload' in request.arguments
+        assert 'upload' in request.files
+        f = upload.argspec(request, None)
+        self.assertIsNotNone(f)
